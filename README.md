@@ -1,50 +1,236 @@
-# Welcome to your Expo app 👋
+Babyrons — Suivi des bébés (spécial jumeaux)
 
-This is an [Expo](https://expo.dev) project created with [`create-expo-app`](https://www.npmjs.com/package/create-expo-app).
+Babyrons est une application simple et intuitive pour suivre les biberons, siestes, couches, médicaments et croissance de vos bébés — conçue pour les parents de jumeaux et triplés.
+💰 Version gratuite : complète, sans pub.
+🌈 Version Pro (2 €) : export PDF, synchronisation Cloud et thèmes personnalisables.
 
-## Get started
+Objectifs
 
-1. Install dependencies
+Suivre facilement les besoins des bébés (repas, sommeil, soins, croissance).
 
-   ```bash
-   npm install
-   ```
+Gérer plusieurs bébés à la fois avec une interface claire et rapide.
 
-2. Start the app
+Activer ou désactiver les services selon vos besoins (biberons, sommeil, etc.).
 
-   ```bash
-   npx expo start
-   ```
+Proposer une version Pro abordable avec des outils avancés (PDF, Cloud, thèmes).
 
-In the output, you'll find options to open the app in a
+Rester simple, fiable et sans abonnement.
 
-- [development build](https://docs.expo.dev/develop/development-builds/introduction/)
-- [Android emulator](https://docs.expo.dev/workflow/android-studio-emulator/)
-- [iOS simulator](https://docs.expo.dev/workflow/ios-simulator/)
-- [Expo Go](https://expo.dev/go), a limited sandbox for trying out app development with Expo
+Fonctionnalités principales
+Service	Gratuit	Pro
+Multi-bébé (illimité)	✅	✅
+Biberons (heure, quantité, type)	✅	✅
+Sommeil / Sieste	✅	✅
+Médicaments / Vitamine D	✅	✅
+Couches	✅	✅
+Croissance (poids, taille, périmètre crânien)	✅	✅
+Activation/désactivation de services	✅	✅
+Historique détaillé (timeline)	✅	✅
+Statistiques par bébé et par jour	✅	✅
+Export PDF / CSV	❌	✅
+Synchro Cloud (Firebase/Supabase)	❌	✅
+Thèmes personnalisables (pastel, nuit)	❌	✅
+Aperçu
 
-You can start developing by editing the files inside the **app** directory. This project uses [file-based routing](https://docs.expo.dev/router/introduction).
+Voir le fichier : Babyrons_wireframes.pdf (wireframes exportés depuis Figma).
 
-## Get a fresh project
+Stack technique
+Front-end
 
-When you're ready, run:
+React Native + Expo
 
-```bash
-npm run reset-project
-```
+TypeScript
 
-This command will move the starter code to the **app-example** directory and create a blank **app** directory where you can start developing.
+React Navigation
 
-## Learn more
+Zustand (gestion d’état)
 
-To learn more about developing your project with Expo, look at the following resources:
+MMKV (stockage local rapide)
 
-- [Expo documentation](https://docs.expo.dev/): Learn fundamentals, or go into advanced topics with our [guides](https://docs.expo.dev/guides).
-- [Learn Expo tutorial](https://docs.expo.dev/tutorial/introduction/): Follow a step-by-step tutorial where you'll create a project that runs on Android, iOS, and the web.
+Victory Native (graphiques)
 
-## Join the community
+pdf-lib (export PDF)
 
-Join our community of developers creating universal apps.
+expo-in-app-purchases (achats intégrés)
 
-- [Expo on GitHub](https://github.com/expo/expo): View our open source platform and contribute.
-- [Discord community](https://chat.expo.dev): Chat with Expo users and ask questions.
+Back-end (version Pro)
+
+Firebase ou Supabase
+
+Authentification (parents)
+
+Firestore (synchronisation des événements)
+
+Cloud Storage (photos bébés)
+
+Architecture du projet
+Babyrons/
+├── app/
+│   ├── _layout.tsx
+│   ├── (tabs)/
+│   │   ├── index.tsx         # Accueil (Dashboard)
+│   │   ├── history.tsx       # Historique
+│   │   ├── stats.tsx         # Statistiques
+│   │   └── settings.tsx      # Paramètres
+│   └── modals/
+│       ├── add-event.tsx     # Ajout biberon/sommeil/etc.
+│       └── manage-baby.tsx   # CRUD bébé
+│
+├── src/
+│   ├── components/
+│   │   ├── BabySwitcher.tsx
+│   │   ├── ServiceCard.tsx
+│   │   └── EventForm/
+│   │       ├── BottleForm.tsx
+│   │       ├── SleepForm.tsx
+│   │       ├── MedForm.tsx
+│   │       ├── DiaperForm.tsx
+│   │       └── GrowthForm.tsx
+│   ├── state/
+│   │   ├── useServices.ts
+│   │   ├── useBabies.ts
+│   │   └── usePro.ts
+│   ├── lib/
+│   │   ├── firebase.ts
+│   │   ├── mmkv.ts
+│   │   ├── pdf.ts
+│   │   └── charts.ts
+│   ├── api/
+│   │   ├── events.ts
+│   │   ├── sync.ts
+│   │   ├── local.ts
+│   │   └── remote.ts
+│   ├── data/
+│   │   ├── types.ts
+│   │   └── transforms.ts
+│   ├── hooks/
+│   │   ├── useEventSave.ts
+│   │   └── useSyncGate.ts
+│   └── theme/
+│       ├── colors.ts
+│       └── spacing.ts
+│
+└── README.md
+
+Modèles de données (TypeScript)
+export type ServiceType = "bottle" | "sleep" | "med" | "diaper" | "growth";
+
+export interface Baby {
+  id: string;
+  name: string;
+  color: string;
+  photoUrl?: string;
+  createdAt: number;
+}
+
+export interface BaseEvent {
+  id: string;
+  babyId: string;
+  type: ServiceType;
+  at: number;
+  createdBy: string;
+}
+
+export interface BottleEvent extends BaseEvent {
+  type: "bottle";
+  ml: number;
+  kind?: "breastmilk" | "formula" | "mixed";
+}
+
+Installation et lancement
+
+Cloner le projet
+
+git clone https://github.com/tonpseudo/Babyrons.git
+cd Babyrons
+
+
+Installer les dépendances
+
+npm install
+
+
+Lancer en développement
+
+npx expo start
+
+
+(Optionnel) Configurer Firebase
+Crée un projet Firebase, active Firestore et ajoute ta configuration dans src/lib/firebase.ts :
+
+import { initializeApp } from "firebase/app";
+import { getFirestore } from "firebase/firestore";
+import { getAuth } from "firebase/auth";
+
+const firebaseConfig = {
+  apiKey: "...",
+  authDomain: "...",
+  projectId: "...",
+  storageBucket: "...",
+  messagingSenderId: "...",
+  appId: "..."
+};
+
+export const app = initializeApp(firebaseConfig);
+export const db = getFirestore(app);
+export const auth = getAuth(app);
+
+Version Pro (2 €)
+
+La version Babyrons Pro débloque :
+
+Export PDF des historiques
+
+Synchronisation Cloud multi-appareils
+
+Thèmes pastel ou nuit
+
+Gérée via expo-in-app-purchases.
+
+Statistiques et export PDF (Pro)
+
+Onglet Stats :
+
+Moyenne des biberons par jour
+
+Temps moyen de sieste
+
+Graphique poids/taille
+
+Bouton d’export PDF (Pro)
+
+Généré avec pdf-lib.
+
+Sauvegarde Cloud (Pro)
+
+Synchronisation automatique via Firestore :
+
+users/{uid}/babies
+users/{uid}/events
+
+Notifications (à venir)
+
+Alerte “Prochain biberon dans 15 min”
+
+Alerte “Vitamine D oubliée”
+
+Roadmap
+Étape	Objectif	Statut
+S1–S2	Design + Navigation + Zustand + CRUD bébés	✅
+S3	Service Biberons + Historique local	🔄
+S4	Sommeil / Médicaments / Couches / Croissance	⏳
+S5	Stats + Thèmes + Export PDF (Pro)	⏳
+S6	Firebase Sync (Pro) + In-App Purchase	⏳
+S7	Tests + Performance	⏳
+S8	Publication Play Store / App Store	⏳
+Contact
+
+👨‍💻 Matthieu Gallice
+📧 contact@babyrons.app
+ (placeholder)
+🌐 Instagram / Site à venir
+
+Licence
+
+MIT License — libre d’utilisation et d’adaptation.
+© 2025 Babyrons.

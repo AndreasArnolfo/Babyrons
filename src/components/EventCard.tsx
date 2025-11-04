@@ -29,17 +29,52 @@ function getEventIcon(type: string): keyof typeof Ionicons.glyphMap {
 function getEventDetails(event: Event): string {
   switch (event.type) {
     case 'bottle':
-      return `${(event as BottleEvent).ml} ml`;
+      const bottle = event as BottleEvent;
+      const kindLabels = {
+        breastmilk: 'lait maternel',
+        formula: 'préparation',
+        mixed: 'mixte',
+      };
+      const kindLabel = bottle.kind ? ` (${kindLabels[bottle.kind]})` : '';
+      return `${bottle.ml} ml${kindLabel}`;
+    
     case 'sleep':
       const sleepEvent = event as SleepEvent;
-      return sleepEvent.duration ? `${Math.floor(sleepEvent.duration / 60000)} min` : 'En cours';
+      if (sleepEvent.duration) {
+        const hours = Math.floor(sleepEvent.duration / 3600000);
+        const minutes = Math.floor((sleepEvent.duration % 3600000) / 60000);
+        if (hours > 0) {
+          return `${hours}h${minutes > 0 ? `${minutes}min` : ''}`;
+        }
+        return `${minutes} min`;
+      }
+      return 'En cours';
+    
     case 'med':
-      return (event as MedEvent).name;
+      const medEvent = event as MedEvent;
+      let medDetails = medEvent.name;
+      if (medEvent.dose) {
+        medDetails += ` - ${medEvent.dose}`;
+      }
+      return medDetails;
+    
     case 'diaper':
-      return (event as DiaperEvent).kind;
+      const diaperEvent = event as DiaperEvent;
+      const diaperLabels = {
+        wet: 'Mouillée',
+        dirty: 'Sale',
+        both: 'Les deux',
+      };
+      return diaperLabels[diaperEvent.kind] || diaperEvent.kind;
+    
     case 'growth':
       const growth = event as GrowthEvent;
-      return `${growth.weightKg ? `${growth.weightKg} kg` : ''}`;
+      const parts: string[] = [];
+      if (growth.weightKg) parts.push(`${growth.weightKg} kg`);
+      if (growth.heightCm) parts.push(`${growth.heightCm} cm`);
+      if (growth.headCircumferenceCm) parts.push(`PC: ${growth.headCircumferenceCm} cm`);
+      return parts.join(' • ') || 'Mesures';
+    
     default:
       return '';
   }

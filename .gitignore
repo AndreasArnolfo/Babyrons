@@ -1,0 +1,72 @@
+# Fichier .gitignore pour React Native
+
+# Dépendances Node.js
+# Celles-ci sont installées localement via npm ou yarn
+/node_modules/
+
+# Logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+*.log
+
+# Fichiers système (macOS, Windows)
+.DS_Store
+Thumbs.db
+
+# Fichiers d'IDE et d'éditeur
+.idea/
+.vscode/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sublime-workspace
+
+# Variables d'environnement
+# Ne jamais commiter de clés d'API ou de secrets !
+.env
+.env.*
+# Exclure l'exemple (si vous en avez un) pour le commiter
+!.env.example
+!.env.template
+
+# Build React Native (général)
+/build/
+/dist/
+
+# Cache Metro Bundler
+.metro-cache/
+
+# Projets Expo (si applicable)
+.expo/
+.expo-shared/
+
+# --- iOS ---
+# Dossier de build Xcode
+/ios/build/
+# Dépendances CocoaPods
+/ios/Pods/
+# Fichiers binaires
+*.ipa
+# Fichiers utilisateur Xcode
+*.xcuserdatad
+
+# --- Android ---
+# Dossiers de build Gradle
+/android/build/
+/android/app/build/
+# Cache Gradle
+/android/.gradle/
+# Fichier de configuration local (contient le chemin du SDK)
+/android/local.properties
+# Fichiers binaires
+*.apk
+*.aab
+# Fichiers Keystore (TRÈS IMPORTANT pour la sécurité)
+# Utilisés pour signer votre application pour le Play Store
+*.keystore
+*.jks
+
+# Tests
+/coverage/

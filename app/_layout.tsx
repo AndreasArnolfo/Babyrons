@@ -12,7 +12,22 @@ export default function RootLayout() {
     <ThemeProvider value={DefaultTheme}>
       <Stack>
         <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-        <Stack.Screen name="modal" options={{ presentation: 'modal', title: 'Modal' }} />
+        <Stack.Screen name="login" options={{ headerShown: false }} />
+        <Stack.Screen name="register" options={{ headerShown: false }} />
+        <Stack.Screen 
+          name="modals/add-event" 
+          options={{ 
+            presentation: 'modal',
+            headerShown: false,
+          }} 
+        />
+        <Stack.Screen 
+          name="modals/manage-baby" 
+          options={{ 
+            presentation: 'modal',
+            headerShown: false,
+          }} 
+        />
       </Stack>
       <StatusBar style="auto" />
     </ThemeProvider>

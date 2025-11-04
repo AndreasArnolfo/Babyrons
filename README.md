@@ -66,29 +66,26 @@
 
 Babyrons/
 ├── app/
-│ ├── _layout.tsx
-│ ├── (tabs)/
-│ │ ├── index.tsx # Accueil (Dashboard)
-│ │ ├── history.tsx # Historique
-│ │ ├── stats.tsx # Statistiques
-│ │ └── settings.tsx # Paramètres
-│ └── modals/
-│ ├── add-event.tsx # Ajout (biberon / sommeil / etc.)
-│ └── manage-baby.tsx # Gestion des bébés
+│   ├── _layout.tsx
+│   ├── (tabs)/
+│   │   ├── index.tsx          # Accueil (Dashboard)
+│   │   ├── history.tsx        # Historique
+│   │   ├── stats.tsx          # Statistiques
+│   │   └── settings.tsx       # Paramètres
+│   └── modals/
+│       ├── add-event.tsx      # Ajout (biberon / sommeil / etc.)
+│       └── manage-baby.tsx    # Gestion des bébés
 │
 ├── src/
-│ ├── components/ # Composants réutilisables
-│ ├── state/ # Stores Zustand
-│ ├── lib/ # Firebase, MMKV, PDF...
-│ ├── api/ # Gestion locale / cloud
-│ ├── data/ # Types et modèles
-│ ├── hooks/ # Hooks personnalisés
-│ └── theme/ # Couleurs et espacements
+│   ├── components/            # Composants réutilisables
+│   ├── state/                 # Stores Zustand
+│   ├── lib/                   # Firebase, MMKV, PDF...
+│   ├── api/                   # Gestion locale / cloud
+│   ├── data/                  # Types et modèles
+│   ├── hooks/                 # Hooks personnalisés
+│   └── theme/                 # Couleurs et espacements
 │
 └── README.md
-
-yaml
-Copier le code
 
 ---
 
@@ -201,7 +198,7 @@ S7	Tests + Optimisations	⏳
 S8	Publication sur Play Store / App Store	⏳
 
 👨‍💻 Contact
-Auteur : Matthieu Gallice
+Auteur : Andreas Arnolfo & Matthieu Gallice
 📧 contact@babyrons.app (placeholder)
 🌐 Instagram / Site à venir
 

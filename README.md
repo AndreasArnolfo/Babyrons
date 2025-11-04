@@ -65,27 +65,26 @@
 ## 🧱 Structure du projet
 
 Babyrons/
-├── app/
-│   ├── _layout.tsx
-│   ├── (tabs)/
-│   │   ├── index.tsx          # Accueil (Dashboard)
-│   │   ├── history.tsx        # Historique
-│   │   ├── stats.tsx          # Statistiques
-│   │   └── settings.tsx       # Paramètres
-│   └── modals/
-│       ├── add-event.tsx      # Ajout (biberon / sommeil / etc.)
-│       └── manage-baby.tsx    # Gestion des bébés
-│
-├── src/
-│   ├── components/            # Composants réutilisables
-│   ├── state/                 # Stores Zustand
-│   ├── lib/                   # Firebase, MMKV, PDF...
-│   ├── api/                   # Gestion locale / cloud
-│   ├── data/                  # Types et modèles
-│   ├── hooks/                 # Hooks personnalisés
-│   └── theme/                 # Couleurs et espacements
-│
-└── README.md
+- app/
+  - _layout.tsx
+  - (tabs)/
+    - index.tsx → Accueil (Dashboard)
+    - history.tsx → Historique
+    - stats.tsx → Statistiques
+    - settings.tsx → Paramètres
+  - modals/
+    - add-event.tsx → Ajout (biberon / sommeil / etc.)
+    - manage-baby.tsx → Gestion des bébés
+- src/
+  - components/ → Composants réutilisables
+  - state/ → Stores Zustand
+  - lib/ → Firebase, MMKV, PDF...
+  - api/ → Gestion locale / cloud
+  - data/ → Types et modèles
+  - hooks/ → Hooks personnalisés
+  - theme/ → Couleurs et espacements
+- README.md
+
 
 ---
 

@@ -2,7 +2,7 @@ import { create } from 'zustand';
 import { Baby, Event, AppSettings, ServiceType } from '../data/types';
 import { StorageKeys, getStorageItem, setStorageItem } from '../lib/storage';
 import { babyColors } from '../theme/colors';
-import { fetchBabies, fetchEvents, upsertBaby, deleteBabyAndEvents, upsertEvent, deleteEvent } from '../api/supabaseData';
+import { fetchBabies, fetchEvents, fetchSettings, upsertBaby, deleteBabyAndEvents, upsertEvent, deleteEvent, upsertSettings } from '../api/supabaseData';
 
 // 🍼 Nouveau : interface Baby enrichie
 export interface ExtendedBaby extends Baby {
@@ -58,15 +58,26 @@ export const useBabyStore = create<BabyStore>((set, get) => {
   loadFromSupabase: async () => {
     const userId = get().userId;
     if (!userId) return;
-    const [babies, events] = await Promise.all([
+    const [babies, events, settings] = await Promise.all([
       fetchBabies(userId),
       fetchEvents(userId),
+      fetchSettings(userId),
     ]);
     const extendedBabies: ExtendedBaby[] = babies.map(baby => ({
       ...baby,
       photo: baby.photo === undefined ? null : baby.photo,
     }));
     set({ babies: extendedBabies, events });
+    const finalSettings = settings || get().settings;
+    set({ 
+      babies, 
+      events,
+      settings: finalSettings,
+    });
+    // Si les settings n'existent pas encore dans Supabase, les créer
+    if (!settings && userId) {
+      void upsertSettings(userId, finalSettings);
+    }
     get().saveToStorage();
   },
   
@@ -113,8 +124,8 @@ export const useBabyStore = create<BabyStore>((set, get) => {
     get().saveToStorage();
     const userId = get().userId;
     if (userId) {
-      const baby = get().babies.find(b => b.id === id);
-      if (baby) { void upsertBaby(userId, baby); }
+      const updatedBaby = get().babies.find(b => b.id === id);
+      if (updatedBaby) { void upsertBaby(userId, updatedBaby); }
     }
   },
   
@@ -153,18 +164,26 @@ export const useBabyStore = create<BabyStore>((set, get) => {
       const newEnabled = enabled.includes(service)
         ? enabled.filter(s => s !== service)
         : [...enabled, service];
+      const newSettings = { ...state.settings, enabledServices: newEnabled };
       return {
-        settings: { ...state.settings, enabledServices: newEnabled },
+        settings: newSettings,
       };
     });
     get().saveToStorage();
+    const userId = get().userId;
+    if (userId) { void upsertSettings(userId, get().settings); }
   },
   
   updateSettings: (updates: Partial<AppSettings>) => {
-    set(state => ({
-      settings: { ...state.settings, ...updates },
-    }));
+    set(state => {
+      const newSettings = { ...state.settings, ...updates };
+      return {
+        settings: newSettings,
+      };
+    });
     get().saveToStorage();
+    const userId = get().userId;
+    if (userId) { void upsertSettings(userId, get().settings); }
   },
   
   loadFromStorage: () => {

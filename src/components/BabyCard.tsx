@@ -7,9 +7,10 @@ import { Spacing, BorderRadius, FontSize } from "../theme/spacing";
 interface BabyCardProps {
   baby: Baby;
   onPress?: () => void;
+  isSelected?: boolean;
 }
 
-export function BabyCard({ baby, onPress }: BabyCardProps) {
+export function BabyCard({ baby, onPress, isSelected = false }: BabyCardProps) {
   const defaultImage = require("../../assets/images/baby-placeholder.png");
 
   // 🧩 Sécurisation de la donnée (si baby.name est un objet, on récupère le vrai nom)
@@ -26,6 +27,7 @@ export function BabyCard({ baby, onPress }: BabyCardProps) {
       style={({ pressed }) => [
         styles.card,
         { borderColor: baby.color || Colors.pastel.rose },
+        isSelected && styles.selected,
         pressed && styles.pressed,
       ]}
     >
@@ -63,6 +65,12 @@ const styles = StyleSheet.create({
   pressed: {
     transform: [{ scale: 0.96 }],
     opacity: 0.9,
+  },
+  selected: {
+    borderWidth: 3,
+    shadowOpacity: 0.2,
+    shadowRadius: 6,
+    elevation: 5,
   },
   imageContainer: {
     width: CARD_SIZE - Spacing.md,

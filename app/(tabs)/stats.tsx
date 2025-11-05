@@ -39,8 +39,7 @@ export default function Stats() {
             <View style={styles.statCard}>
               <Text style={styles.statValue}>{events.length}</Text>
               <Text style={styles.statLabel}>
-                Événement{events.length > 1 ? "s" : ""} total
-                {events.length > 1 ? "aux" : ""}
+                {events.length > 1 ? "Événements totaux" : "Événement total"}
               </Text>
             </View>
 

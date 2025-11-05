@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, Pressable, Modal, TextInput } from 'react-native';
 import { Event, BottleEvent, SleepEvent, MedEvent, DiaperEvent, GrowthEvent } from '../data/types';
 import { Colors } from '../theme/colors';
@@ -41,9 +41,8 @@ function parseTimeInput(timeStr: string, currentTimestamp: number): number {
   }
 }
 
-function formatTimeSince(eventTimestamp: number): string {
-  const now = Date.now();
-  const diffMs = now - eventTimestamp;
+function formatTimeSince(eventTimestamp: number, currentTime: number = Date.now()): string {
+  const diffMs = currentTime - eventTimestamp;
   const diffHours = Math.floor(diffMs / 3600000);
   const diffMinutes = Math.floor((diffMs % 3600000) / 60000);
   
@@ -122,9 +121,25 @@ export function EventCard({ event, babyName, allEvents = [] }: EventCardProps) {
   const { updateEvent } = useBabyStore();
   const [isEditingTime, setIsEditingTime] = useState(false);
   const [timeInput, setTimeInput] = useState(formatTimeForInput(event.at));
+  const [currentTime, setCurrentTime] = useState(Date.now());
+  
+  // Rafraîchissement automatique du temps pour les biberons
+  useEffect(() => {
+    if (event.type !== 'bottle') return;
+    
+    // Mettre à jour immédiatement
+    setCurrentTime(Date.now());
+    
+    // Mettre à jour toutes les minutes
+    const interval = setInterval(() => {
+      setCurrentTime(Date.now());
+    }, 60000); // 60 secondes
+    
+    return () => clearInterval(interval);
+  }, [event.type, event.at]);
   
   // Pour les biberons, calculer le temps écoulé depuis le timestamp du biberon jusqu'à maintenant
-  const timeSinceBottle = event.type === 'bottle' ? formatTimeSince(event.at) : null;
+  const timeSinceBottle = event.type === 'bottle' ? formatTimeSince(event.at, currentTime) : null;
 
   const handleTimePress = () => {
     setIsEditingTime(true);

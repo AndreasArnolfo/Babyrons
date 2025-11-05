@@ -35,6 +35,7 @@ export default function History() {
                 key={event.id}
                 event={event}
                 babyName={baby?.name || "Inconnu"}
+                allEvents={events}
               />
             );
           })

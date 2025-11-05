@@ -8,11 +8,24 @@ import { Ionicons } from '@expo/vector-icons';
 interface EventCardProps {
   event: Event;
   babyName: string;
+  allEvents?: Event[]; // Gardé pour compatibilité mais plus utilisé
 }
 
 function formatTime(timestamp: number): string {
   const date = new Date(timestamp);
   return date.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
+}
+
+function formatTimeSince(eventTimestamp: number): string {
+  const now = Date.now();
+  const diffMs = now - eventTimestamp;
+  const diffHours = Math.floor(diffMs / 3600000);
+  const diffMinutes = Math.floor((diffMs % 3600000) / 60000);
+  
+  if (diffHours > 0) {
+    return `Il y a ${diffHours}h${diffMinutes > 0 ? `${diffMinutes}min` : ''}`;
+  }
+  return `Il y a ${diffMinutes} min`;
 }
 
 function getEventIcon(type: string): keyof typeof Ionicons.glyphMap {
@@ -80,7 +93,10 @@ function getEventDetails(event: Event): string {
   }
 }
 
-export function EventCard({ event, babyName }: EventCardProps) {
+export function EventCard({ event, babyName, allEvents = [] }: EventCardProps) {
+  // Pour les biberons, calculer le temps écoulé depuis le timestamp du biberon jusqu'à maintenant
+  const timeSinceBottle = event.type === 'bottle' ? formatTimeSince(event.at) : null;
+
   return (
     <View style={styles.container}>
       <View style={styles.iconContainer}>
@@ -90,7 +106,12 @@ export function EventCard({ event, babyName }: EventCardProps) {
         <Text style={styles.babyName}>{babyName}</Text>
         <Text style={styles.details}>{getEventDetails(event)}</Text>
       </View>
-      <Text style={styles.time}>{formatTime(event.at)}</Text>
+      <View style={styles.timeContainer}>
+        <Text style={styles.time}>{formatTime(event.at)}</Text>
+        {event.type === 'bottle' && timeSinceBottle && (
+          <Text style={styles.timeSince}>{timeSinceBottle}</Text>
+        )}
+      </View>
     </View>
   );
 }
@@ -131,8 +152,17 @@ const styles = StyleSheet.create({
     fontSize: FontSize.sm,
     color: Colors.neutral.darkGray,
   },
+  timeContainer: {
+    alignItems: 'flex-end',
+  },
   time: {
     fontSize: FontSize.sm,
     color: Colors.neutral.darkGray,
+  },
+  timeSince: {
+    fontSize: FontSize.xs,
+    color: Colors.neutral.darkGray,
+    marginTop: 2,
+    opacity: 0.7,
   },
 });

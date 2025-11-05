@@ -244,15 +244,15 @@ export default function ManageBabyModal() {
             >
               <Image
                 source={
-                  photo
-                    ? { uri: photo }
+                  baby.photo
+                    ? { uri: baby.photo }
                     : baby.gender === "female"
                     ? defaultImageF
                     : baby.gender === "male"
                     ? defaultImageM
                     : require("../../assets/images/baby-placeholder.png")
                 }
-                key={`${baby.gender}-${photo}`} // ✅ force le rafraîchissement quand le sexe change
+                key={`${baby.gender}-${baby.photo}`} // ✅ force le rafraîchissement quand le sexe change
                 style={styles.image}
               />
               <View style={styles.babyInfo}>

@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { ScrollView, View, Text, StyleSheet, Switch, Pressable, Alert, ActivityIndicator } from "react-native";
 import { useBabyStore } from "../../src/state/useBabyStore";
 import { useSupabaseAuth } from "../../src/hooks/useSupabaseAuth";
@@ -20,11 +20,60 @@ export default function Settings() {
   const { settings, toggleService, updateSettings, babies, events } = useBabyStore();
   const { session, signOut } = useSupabaseAuth();
   const [isExporting, setIsExporting] = useState(false);
+  const [selectedBabyIds, setSelectedBabyIds] = useState<Set<string>>(new Set(babies.map(b => b.id)));
+
+  // Mettre à jour les sélections quand les bébés changent
+  useEffect(() => {
+    const babyIds = new Set(babies.map(b => b.id));
+    setSelectedBabyIds(prev => {
+      const updated = new Set(prev);
+      // Retirer les bébés qui n'existent plus
+      Array.from(updated).forEach(id => {
+        if (!babyIds.has(id)) updated.delete(id);
+      });
+      // Ajouter les nouveaux bébés par défaut
+      babyIds.forEach(id => {
+        if (!updated.has(id)) updated.add(id);
+      });
+      return updated;
+    });
+  }, [babies]);
+
+  const toggleBabySelection = (babyId: string) => {
+    setSelectedBabyIds(prev => {
+      const updated = new Set(prev);
+      if (updated.has(babyId)) {
+        updated.delete(babyId);
+      } else {
+        updated.add(babyId);
+      }
+      return updated;
+    });
+  };
+
+  const selectAllBabies = () => {
+    setSelectedBabyIds(new Set(babies.map(b => b.id)));
+  };
+
+  const deselectAllBabies = () => {
+    setSelectedBabyIds(new Set());
+  };
 
   const handleExportPDF = async () => {
+    if (selectedBabyIds.size === 0) {
+      Alert.alert(
+        'Aucun bébé sélectionné',
+        'Veuillez sélectionner au moins un bébé à exporter.',
+        [{ text: 'OK' }]
+      );
+      return;
+    }
+
     try {
       setIsExporting(true);
-      await exportDataToPDF(babies, events);
+      const selectedBabies = babies.filter(b => selectedBabyIds.has(b.id));
+      const selectedEvents = events.filter(e => selectedBabyIds.has(e.babyId));
+      await exportDataToPDF(selectedBabies, selectedEvents);
       Alert.alert(
         'Export réussi !',
         'Votre rapport PDF a été généré avec succès.',
@@ -78,19 +127,64 @@ export default function Settings() {
           <View style={styles.exportCard}>
             <Text style={styles.exportTitle}>📄 Exporter en PDF</Text>
             <Text style={styles.exportDescription}>
-              Générez un rapport PDF complet avec tous vos bébés et leurs événements
+              Sélectionnez les bébés à inclure dans le rapport PDF
             </Text>
-            <Pressable 
-              style={[styles.exportButton, isExporting && styles.exportButtonDisabled]} 
-              onPress={handleExportPDF}
-              disabled={isExporting}
-            >
-              {isExporting ? (
-                <ActivityIndicator color={Colors.neutral.white} />
-              ) : (
-                <Text style={styles.exportButtonText}>Exporter en PDF</Text>
-              )}
-            </Pressable>
+            
+            {babies.length === 0 ? (
+              <Text style={styles.noBabiesText}>Aucun bébé enregistré</Text>
+            ) : (
+              <>
+                <View style={styles.babySelectionActions}>
+                  <Pressable onPress={selectAllBabies} style={styles.selectionActionButton}>
+                    <Text style={styles.selectionActionText}>Tout sélectionner</Text>
+                  </Pressable>
+                  <Pressable onPress={deselectAllBabies} style={styles.selectionActionButton}>
+                    <Text style={styles.selectionActionText}>Tout désélectionner</Text>
+                  </Pressable>
+                </View>
+                
+                <View style={styles.babySelectionList}>
+                  {babies.map((baby) => {
+                    const isSelected = selectedBabyIds.has(baby.id);
+                    return (
+                      <Pressable
+                        key={baby.id}
+                        style={styles.babySelectionRow}
+                        onPress={() => toggleBabySelection(baby.id)}
+                      >
+                        <View style={styles.babySelectionLeft}>
+                          <View style={[styles.babyColorIndicator, { backgroundColor: baby.color }]} />
+                          <Text style={styles.babySelectionName}>{baby.name}</Text>
+                        </View>
+                        <Switch
+                          value={isSelected}
+                          onValueChange={() => toggleBabySelection(baby.id)}
+                          trackColor={{
+                            false: Colors.neutral.gray,
+                            true: Colors.pastel.mintActive,
+                          }}
+                          thumbColor={Colors.neutral.white}
+                        />
+                      </Pressable>
+                    );
+                  })}
+                </View>
+                
+                <Pressable 
+                  style={[styles.exportButton, (isExporting || selectedBabyIds.size === 0) && styles.exportButtonDisabled]} 
+                  onPress={handleExportPDF}
+                  disabled={isExporting || selectedBabyIds.size === 0}
+                >
+                  {isExporting ? (
+                    <ActivityIndicator color={Colors.neutral.white} />
+                  ) : (
+                    <Text style={styles.exportButtonText}>
+                      Exporter ({selectedBabyIds.size} bébé{selectedBabyIds.size > 1 ? 's' : ''})
+                    </Text>
+                  )}
+                </Pressable>
+              </>
+            )}
           </View>
         </View>
 
@@ -263,5 +357,60 @@ const styles = StyleSheet.create({
     fontSize: FontSize.md,
     fontWeight: '700',
     color: Colors.neutral.white,
+  },
+  noBabiesText: {
+    fontSize: FontSize.sm,
+    color: Colors.neutral.darkGray,
+    textAlign: 'center',
+    paddingVertical: Spacing.md,
+    fontStyle: 'italic',
+  },
+  babySelectionActions: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginBottom: Spacing.md,
+    gap: Spacing.sm,
+  },
+  selectionActionButton: {
+    flex: 1,
+    backgroundColor: Colors.pastel.mint,
+    borderRadius: BorderRadius.md,
+    padding: Spacing.sm,
+    alignItems: 'center',
+  },
+  selectionActionText: {
+    fontSize: FontSize.sm,
+    color: Colors.neutral.charcoal,
+    fontWeight: '600',
+  },
+  babySelectionList: {
+    marginBottom: Spacing.md,
+  },
+  babySelectionRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    backgroundColor: Colors.neutral.white,
+    borderRadius: BorderRadius.md,
+    padding: Spacing.md,
+    marginBottom: Spacing.sm,
+    borderWidth: 1,
+    borderColor: Colors.neutral.gray,
+  },
+  babySelectionLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
+  },
+  babyColorIndicator: {
+    width: 20,
+    height: 20,
+    borderRadius: 10,
+    marginRight: Spacing.sm,
+  },
+  babySelectionName: {
+    fontSize: FontSize.md,
+    color: Colors.neutral.charcoal,
+    fontWeight: '600',
   },
 });

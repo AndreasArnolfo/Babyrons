@@ -3,7 +3,7 @@ import { View, Text, StyleSheet, Pressable, Modal, TextInput } from 'react-nativ
 import { Event, BottleEvent, SleepEvent, MedEvent, DiaperEvent, GrowthEvent } from '../data/types';
 import { Colors } from '../theme/colors';
 import { Spacing, BorderRadius, FontSize } from '../theme/spacing';
-import { Ionicons } from '@expo/vector-icons';
+import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useBabyStore } from '../state/useBabyStore';
 
 interface EventCardProps {
@@ -52,14 +52,25 @@ function formatTimeSince(eventTimestamp: number, currentTime: number = Date.now(
   return `Il y a ${diffMinutes} min`;
 }
 
-function getEventIcon(type: string): keyof typeof Ionicons.glyphMap {
+function getEventIcon(type: string): keyof typeof MaterialCommunityIcons.glyphMap {
   switch (type) {
-    case 'bottle': return 'water';
-    case 'sleep': return 'moon';
-    case 'med': return 'medical';
-    case 'diaper': return 'shirt';
-    case 'growth': return 'trending-up';
-    default: return 'ellipse';
+    case 'bottle': return 'baby-bottle';
+    case 'sleep': return 'sleep';
+    case 'med': return 'pill';
+    case 'diaper': return 'emoticon-poop';
+    case 'growth': return 'human-male-height';
+    default: return 'circle';
+  }
+}
+
+function getEventColor(type: string): string {
+  switch (type) {
+    case 'bottle': return Colors.pastel.sky; // Bleu pour le lait
+    case 'sleep': return Colors.pastel.lavender; // Violet pour la nuit
+    case 'med': return Colors.pastel.rose; // Rose pour les médicaments
+    case 'diaper': return '#D4A574'; // Marron clair pour les couches
+    case 'growth': return Colors.pastel.mintActive; // Vert pour la croissance
+    default: return Colors.neutral.darkGray;
   }
 }
 
@@ -190,7 +201,11 @@ export function EventCard({ event, babyName, allEvents = [] }: EventCardProps) {
     <>
       <View style={styles.container}>
         <View style={styles.iconContainer}>
-          <Ionicons name={getEventIcon(event.type)} size={24} color={Colors.pastel.mintActive} />
+          <MaterialCommunityIcons 
+            name={getEventIcon(event.type)} 
+            size={24} 
+            color={getEventColor(event.type)} 
+          />
         </View>
         <View style={styles.content}>
           <Text style={styles.babyName}>{babyName}</Text>

@@ -2,6 +2,7 @@ import React from "react";
 import { ScrollView, View, Text, StyleSheet } from "react-native";
 import { useBabyStore } from "../../src/state/useBabyStore";
 import { EventCard } from "../../src/components/EventCard";
+import { PatternBackground } from "../../src/components/PatternBackground";
 import { Colors } from "../../src/theme/colors";
 import { Spacing, BorderRadius, FontSize } from "../../src/theme/spacing";
 
@@ -11,8 +12,9 @@ export default function History() {
   const sortedEvents = [...events].sort((a, b) => b.at - a.at);
 
   return (
-    <View style={styles.container}>
-      <View style={styles.header}>
+    <PatternBackground>
+      <View style={styles.container}>
+        <View style={styles.header}>
         <Text style={styles.title}>Historique</Text>
         <Text style={styles.subtitle}>
           {sortedEvents.length} événement{sortedEvents.length > 1 ? "s" : ""}
@@ -42,13 +44,14 @@ export default function History() {
         )}
       </ScrollView>
     </View>
+    </PatternBackground>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: Colors.neutral.lightGray,
+    backgroundColor: 'transparent',
   },
   header: {
     backgroundColor: Colors.pastel.lavender,

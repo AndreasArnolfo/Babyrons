@@ -1,6 +1,7 @@
 import React from "react";
 import { ScrollView, View, Text, StyleSheet } from "react-native";
 import { useBabyStore } from "../../src/state/useBabyStore";
+import { PatternBackground } from "../../src/components/PatternBackground";
 import { Colors } from "../../src/theme/colors";
 import { Spacing, BorderRadius, FontSize } from "../../src/theme/spacing";
 
@@ -13,8 +14,9 @@ export default function Stats() {
   const totalSleep = sleepEvents.length;
 
   return (
-    <View style={styles.container}>
-      <View style={styles.header}>
+    <PatternBackground>
+      <View style={styles.container}>
+        <View style={styles.header}>
         <Text style={styles.title}>Statistiques</Text>
         <Text style={styles.subtitle}>Aperçu de vos données</Text>
       </View>
@@ -60,13 +62,14 @@ export default function Stats() {
         )}
       </ScrollView>
     </View>
+    </PatternBackground>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: Colors.neutral.lightGray,
+    backgroundColor: 'transparent',
   },
   header: {
     backgroundColor: Colors.pastel.sky,

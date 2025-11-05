@@ -4,6 +4,7 @@ import { useRouter } from "expo-router";
 import { useBabyStore } from "../../src/state/useBabyStore";
 import { BabyCard } from "../../src/components/BabyCard";
 import { EventCard } from "../../src/components/EventCard";
+import { PatternBackground } from "../../src/components/PatternBackground";
 import { Colors } from "../../src/theme/colors";
 import { Spacing, BorderRadius, FontSize } from "../../src/theme/spacing";
 import { getSupabase } from '@/src/utils/supabase';
@@ -54,7 +55,8 @@ export default function Index() {
 const logo = require("../../assets/images/logo-babyrons.png");
 const insets = useSafeAreaInsets();
   return (
-    <ScrollView style={styles.container}>
+    <PatternBackground>
+      <ScrollView style={styles.container}>
       <View
       style={[
         styles.headerContainer,
@@ -156,6 +158,7 @@ const insets = useSafeAreaInsets();
         )}
       </View>
     </ScrollView>
+    </PatternBackground>
   );
 }
 
@@ -170,7 +173,7 @@ const styles = StyleSheet.create({
   },
   container: {
     flex: 1,
-    backgroundColor: Colors.neutral.lightGray,
+    backgroundColor: 'transparent',
   },
   headerContainer: {
     backgroundColor: "#D6FFD4",
@@ -227,13 +230,6 @@ const styles = StyleSheet.create({
     fontSize: FontSize.sm,
     color: Colors.pastel.mintActive,
     fontWeight: "600",
-  },
-  // ensure babiesContainer exists since it's referenced earlier in the component
-  babiesContainer: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    marginBottom: Spacing.md,
-    // gap is not supported on all RN versions; use margin on children if needed
   },
   manageButton: {
     fontSize: FontSize.md,

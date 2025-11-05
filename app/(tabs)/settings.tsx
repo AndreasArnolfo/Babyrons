@@ -3,6 +3,7 @@ import { ScrollView, View, Text, StyleSheet, Switch, Pressable, Alert, ActivityI
 import { useBabyStore } from "../../src/state/useBabyStore";
 import { useSupabaseAuth } from "../../src/hooks/useSupabaseAuth";
 import { ServiceType } from "../../src/data/types";
+import { PatternBackground } from "../../src/components/PatternBackground";
 import { Colors } from "../../src/theme/colors";
 import { Spacing, BorderRadius, FontSize } from "../../src/theme/spacing";
 import { exportDataToPDF } from "../../src/lib/pdfExport";
@@ -42,8 +43,9 @@ export default function Settings() {
   };
 
   return (
-    <View style={styles.container}>
-      <View style={styles.header}>
+    <PatternBackground>
+      <View style={styles.container}>
+        <View style={styles.header}>
         <Text style={styles.title}>Réglages</Text>
         <Text style={styles.subtitle}>Personnalisez votre expérience</Text>
       </View>
@@ -117,13 +119,14 @@ export default function Settings() {
         </View>
       </ScrollView>
     </View>
+    </PatternBackground>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: Colors.neutral.lightGray,
+    backgroundColor: 'transparent',
   },
   header: {
     backgroundColor: Colors.pastel.rose,

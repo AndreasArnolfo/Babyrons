@@ -1,4 +1,4 @@
-import React, { useEffect } from "react";
+import React, { useEffect, useState } from "react";
 import { ScrollView, View, Text, StyleSheet, Pressable } from "react-native";
 import { useRouter } from "expo-router";
 import { useBabyStore } from "../../src/state/useBabyStore";
@@ -11,10 +11,21 @@ import { getSupabase } from '@/src/utils/supabase';
 export default function Index() {
   const router = useRouter();
   const { babies, events } = useBabyStore();
+  const [selectedBabyId, setSelectedBabyId] = useState<string | null>(null);
 
-  const recentEvents = [...events]
+  // Filtrer les événements selon le bébé sélectionné
+  const filteredEvents = selectedBabyId
+    ? events.filter(e => e.babyId === selectedBabyId)
+    : events;
+
+  const recentEvents = [...filteredEvents]
     .sort((a, b) => b.at - a.at)
     .slice(0, 10);
+
+  const handleBabyPress = (babyId: string) => {
+    // Si on clique sur le même bébé, on désélectionne
+    setSelectedBabyId(prev => prev === babyId ? null : babyId);
+  };
 
   useEffect(() => {
     (async () => {
@@ -54,7 +65,12 @@ export default function Index() {
             </View>
           ) : (
             babies.map((baby) => (
-              <BabyCard key={baby.id} baby={baby} />
+              <BabyCard 
+                key={baby.id} 
+                baby={baby} 
+                onPress={() => handleBabyPress(baby.id)}
+                isSelected={selectedBabyId === baby.id}
+              />
             ))
           )}
         </View>
@@ -62,7 +78,22 @@ export default function Index() {
 
       <View style={styles.section}>
         <View style={styles.sectionHeader}>
-          <Text style={styles.sectionTitle}>Événements récents</Text>
+          <View style={styles.sectionTitleContainer}>
+            <Text style={styles.sectionTitle}>
+              {selectedBabyId 
+                ? `Événements - ${babies.find(b => b.id === selectedBabyId)?.name || 'Bébé'}`
+                : 'Événements récents'
+              }
+            </Text>
+            {selectedBabyId && (
+              <Pressable 
+                onPress={() => setSelectedBabyId(null)}
+                style={styles.clearFilterButton}
+              >
+                <Text style={styles.clearFilterText}>Tous</Text>
+              </Pressable>
+            )}
+          </View>
           {babies.length > 0 && (
             <Pressable onPress={() => router.push('/modals/add-event')}>
               <Text style={styles.addButton}>+ Ajouter</Text>
@@ -74,7 +105,10 @@ export default function Index() {
           <View style={styles.emptyState}>
             <Text style={styles.emptyText}>Aucun événement</Text>
             <Text style={styles.emptySubtext}>
-              Ajoutez votre premier événement pour commencer le suivi
+              {selectedBabyId 
+                ? `Aucun événement pour ${babies.find(b => b.id === selectedBabyId)?.name || 'ce bébé'}. Ajoutez-en un !`
+                : 'Ajoutez votre premier événement pour commencer le suivi'
+              }
             </Text>
           </View>
         ) : (
@@ -164,5 +198,22 @@ const styles = StyleSheet.create({
     fontSize: FontSize.sm,
     color: Colors.neutral.darkGray,
     textAlign: "center",
+  },
+  sectionTitleContainer: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.sm,
+  },
+  clearFilterButton: {
+    paddingHorizontal: Spacing.sm,
+    paddingVertical: Spacing.xs,
+    borderRadius: BorderRadius.sm,
+    backgroundColor: Colors.neutral.lightGray,
+  },
+  clearFilterText: {
+    fontSize: FontSize.xs,
+    color: Colors.neutral.darkGray,
+    fontWeight: '500',
   },
 });

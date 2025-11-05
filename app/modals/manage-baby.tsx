@@ -237,7 +237,6 @@ export default function ManageBabyModal() {
           <Text style={styles.emptyText}>Aucun bébé ajouté.</Text>
         ) : (
           babies.map((baby) => (
-            console.log("Rendu du bébé:", baby),
             <View
               key={baby.id}
               style={[styles.babyCard, { borderLeftColor: baby.color || "#9CBEB3" }]}
@@ -325,6 +324,7 @@ const styles = StyleSheet.create({
     width: 100,
     height: 100,
     borderRadius: 50,
+    marginRight: Spacing.md,
   },
   imageText: {
     color: Colors.neutral.darkGray,

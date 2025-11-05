@@ -70,9 +70,10 @@ export default function Settings() {
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>À propos</Text>
           <Text style={styles.aboutText}>
-            Babyrons v1.0.0{'\n'}
+            Babyrons v1.0.0 © 2025{'\n'}
             Suivi des bébés pour parents de jumeaux et triplés{'\n'}
-            © 2025 - MIT License
+            Développé par Andreas Arnolfo & Matthieu Gallice avec ❤️{'\n'}
+             
           </Text>
         </View>
 

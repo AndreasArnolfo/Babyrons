@@ -62,7 +62,11 @@ export const useBabyStore = create<BabyStore>((set, get) => {
       fetchBabies(userId),
       fetchEvents(userId),
     ]);
-    set({ babies, events });
+    const extendedBabies: ExtendedBaby[] = babies.map(baby => ({
+      ...baby,
+      photo: baby.photo === undefined ? null : baby.photo,
+    }));
+    set({ babies: extendedBabies, events });
     get().saveToStorage();
   },
   

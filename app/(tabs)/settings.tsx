@@ -93,25 +93,6 @@ export default function Settings() {
         </View>
 
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Version Pro</Text>
-          <View style={styles.proCard}>
-            <Text style={styles.proTitle}>
-              {settings.isPro ? "✨ Version Pro active" : "Passer à la version Pro"}
-            </Text>
-            <Text style={styles.proDescription}>
-              {settings.isPro
-                ? "Vous avez accès à toutes les fonctionnalités premium"
-                : "Export PDF, synchronisation Cloud et thèmes personnalisables"}
-            </Text>
-            {!settings.isPro && (
-              <Pressable style={styles.proButton}>
-                <Text style={styles.proButtonText}>2 € seulement</Text>
-              </Pressable>
-            )}
-          </View>
-        </View>
-
-        <View style={styles.section}>
           <Text style={styles.sectionTitle}>À propos</Text>
           <Text style={styles.aboutText}>
             Babyrons v1.0.0 © 2025{'\n'}

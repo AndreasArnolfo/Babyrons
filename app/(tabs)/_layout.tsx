@@ -1,16 +1,82 @@
 
 import { Tabs } from 'expo-router';
 import React from 'react';
-import { Ionicons } from '@expo/vector-icons';
+import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
+import Animated, { useAnimatedStyle, useSharedValue, withSpring, withTiming } from 'react-native-reanimated';
+import { useEffect } from 'react';
 
+// --- Palette Pastel "Babyrons" avec style enfantin ---
+const activeColor = '#FF6B9D'; // Rose pastel vif et enfantin
+const inactiveColor = '#C0C0C0'; // Gris doux pour l'inactif
+const backgroundColor = '#FFFFFF'; // Blanc pur
+const tabBarShadow = '#FF6B9D'; // Ombre colorée pour un effet plus enfantin
 
+// Composant d'icône animé
+const AnimatedIcon = ({ 
+  IconComponent, 
+  name, 
+  nameOutline, 
+  size, 
+  color, 
+  focused 
+}: { 
+  IconComponent: any;
+  name: string;
+  nameOutline: string;
+  size: number;
+  color: string;
+  focused: boolean;
+}) => {
+  const scale = useSharedValue(focused ? 1 : 0.85);
+  const rotation = useSharedValue(0);
+  const opacity = useSharedValue(focused ? 1 : 0.7);
 
-// --- Palette Pastel "Babyrons" ---
-// J'ai choisi un "vert menthe" comme couleur active pour ce thème.
-const babyMint = '#98FFC1'; // Un vert pastel très doux
-const activeColor = '#65C387'; // Un vert un peu plus soutenu pour la lisibilité
-const inactiveColor = '#B0C4DE'; // Un gris-bleu clair pour l'inactif
-const backgroundColor = '#FFFFFF'; // Blanc pur pour un look "propre"
+  useEffect(() => {
+    if (focused) {
+      scale.value = withSpring(1, {
+        damping: 10,
+        stiffness: 200,
+        mass: 0.8,
+      });
+      opacity.value = withTiming(1, { duration: 200 });
+      // Animation de rotation subtile pour l'icône de réglages
+      if (name === 'cog') {
+        rotation.value = withSpring(360, {
+          damping: 12,
+          stiffness: 120,
+        });
+      }
+    } else {
+      scale.value = withTiming(0.85, {
+        duration: 200,
+      });
+      opacity.value = withTiming(0.7, { duration: 200 });
+      rotation.value = withTiming(0, {
+        duration: 200,
+      });
+    }
+  }, [focused, name, scale, opacity, rotation]);
+
+  const animatedStyle = useAnimatedStyle(() => {
+    return {
+      transform: [
+        { scale: scale.value },
+        { rotate: name === 'cog' ? `${rotation.value}deg` : '0deg' },
+      ],
+      opacity: opacity.value,
+    };
+  });
+
+  return (
+    <Animated.View style={animatedStyle}>
+      <IconComponent 
+        name={focused ? name : nameOutline} 
+        size={size} 
+        color={color} 
+      />
+    </Animated.View>
+  );
+};
 
 export default function TabLayout() {
   return (
@@ -24,29 +90,38 @@ export default function TabLayout() {
 
         tabBarStyle: {
           backgroundColor: backgroundColor,
-          height: 70, // Un peu plus haut pour un effet "costaud"
-          paddingBottom: 10, // Marge pour la "home bar" (iPhone)
-          paddingTop: 5,
-          borderTopWidth: 0, // Enlève la ligne de bordure
+          height: 75, // Plus haut pour un look plus enfantin
+          paddingBottom: 20, // Marge pour la "home bar" (iPhone)
+          paddingTop: 8,
+          borderTopWidth: 2, // Bordure colorée et visible
+          borderTopColor: '#FFE5EC', // Rose très clair
           
-          // Ombre douce pour un effet "flottant"
-          shadowColor: '#000',
-          shadowOffset: { width: 0, height: -1 },
-          shadowOpacity: 0.03, // Très subtile
-          shadowRadius: 3,
-          elevation: 5, // Pour Android
+          // Ombre colorée pour un effet enfantin
+          shadowColor: tabBarShadow,
+          shadowOffset: { width: 0, height: -3 },
+          shadowOpacity: 0.15, // Plus visible
+          shadowRadius: 8,
+          elevation: 8, // Pour Android
         },
         tabBarLabelStyle: {
-          fontSize: 11,
-          fontWeight: '600', // Assez lisible
+          fontSize: 12,
+          fontWeight: '700', // Plus gras pour un look enfantin
+          marginTop: -2,
         },
       }}>
       <Tabs.Screen
         name="index"
         options={{
           title: 'Accueil',
-          tabBarIcon: ({ color, size }) => (
-            <Ionicons name="home" size={size ?? 28} color={color} />
+          tabBarIcon: ({ color, focused }) => (
+            <AnimatedIcon
+              IconComponent={MaterialCommunityIcons}
+              name="baby-face-outline"
+              nameOutline="baby-bottle-outline"
+              size={focused ? 32 : 28}
+              color={color}
+              focused={focused}
+            />
           ),
         }}
       />
@@ -54,8 +129,15 @@ export default function TabLayout() {
         name="history"
         options={{
           title: 'Historique',
-          tabBarIcon: ({ color, size }) => (
-            <Ionicons name="time" size={size ?? 28} color={color} />
+          tabBarIcon: ({ color, focused }) => (
+            <AnimatedIcon
+              IconComponent={MaterialCommunityIcons}
+              name="book-open-variant"
+              nameOutline="book-outline"
+              size={focused ? 32 : 28}
+              color={color}
+              focused={focused}
+            />
           ),
         }}
       />
@@ -63,8 +145,15 @@ export default function TabLayout() {
         name="stats"
         options={{
           title: 'Stats',
-          tabBarIcon: ({ color, size }) => (
-            <Ionicons name="stats-chart" size={size ?? 28} color={color} />
+          tabBarIcon: ({ color, focused }) => (
+            <AnimatedIcon
+              IconComponent={MaterialCommunityIcons}
+              name="chart-line-variant"
+              nameOutline="chart-line"
+              size={focused ? 32 : 28}
+              color={color}
+              focused={focused}
+            />
           ),
         }}
       />
@@ -72,8 +161,15 @@ export default function TabLayout() {
         name="settings"
         options={{
           title: 'Réglages',
-          tabBarIcon: ({ color, size }) => (
-            <Ionicons name="settings" size={size ?? 28} color={color} />
+          tabBarIcon: ({ color, focused }) => (
+            <AnimatedIcon
+              IconComponent={MaterialCommunityIcons}
+              name="cog"
+              nameOutline="cog-outline"
+              size={focused ? 32 : 28}
+              color={color}
+              focused={focused}
+            />
           ),
         }}
       />

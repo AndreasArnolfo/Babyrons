@@ -19,18 +19,21 @@ import { Spacing, BorderRadius, FontSize } from "../../src/theme/spacing";
 
 export default function ManageBabyModal() {
   const router = useRouter();
+
   interface Baby {
     id: string;
-    name: string | { name: string };
+    name: string;
+    gender: "male" | "female" | null;
     birthDate: number | null;
     photo: string | null;
     color?: string;
-    gender: "male" | "female" | null;
   }
-  const { babies, addBaby, removeBaby } = useBabyStore() as {
+
+  const { babies, addBaby, removeBaby, updateBaby } = useBabyStore() as {
     babies: Baby[];
     addBaby: (baby: Omit<Baby, "id">) => void;
     removeBaby: (id: string) => void;
+    updateBaby: (id: string, updates: Partial<Baby>) => void;
   };
 
   const [newBabyName, setNewBabyName] = useState("");
@@ -38,6 +41,7 @@ export default function ManageBabyModal() {
   const [birthDate, setBirthDate] = useState<Date | null>(null);
   const [photo, setPhoto] = useState<string | null>(null);
   const [showDatePicker, setShowDatePicker] = useState(false);
+  const [editingBabyId, setEditingBabyId] = useState<string | null>(null);
 
   const defaultImage = require("../../assets/images/baby-placeholder.png");
 
@@ -61,35 +65,57 @@ export default function ManageBabyModal() {
     }
   };
 
-  // ➕ Ajout bébé
-  const handleAddBaby = () => {
+  // ➕ Ajout ou modification
+  const handleAddOrEditBaby = () => {
     if (!newBabyName.trim()) {
       Alert.alert("Erreur", "Veuillez entrer un prénom.");
       return;
     }
 
-    addBaby({
-      name: newBabyName.trim(),
-      gender: selectedSex,
-      birthDate: birthDate ? birthDate.getTime() : null,
-      photo,
-    });
+    if (editingBabyId) {
+      // 🔄 Mode édition
+      updateBaby(editingBabyId, {
+        name: newBabyName.trim(),
+        gender: selectedSex,
+        birthDate: birthDate ? birthDate.getTime() : null,
+        photo,
+      });
+      Alert.alert("Succès", "Bébé modifié avec succès !");
+      setEditingBabyId(null);
+    } else {
+      // ➕ Mode ajout
+      addBaby({
+        name: newBabyName.trim(),
+        gender: selectedSex,
+        birthDate: birthDate ? birthDate.getTime() : null,
+        photo,
+      });
+      Alert.alert("Succès", "Bébé ajouté avec succès !");
+    }
 
+    // Réinitialise les champs
     setNewBabyName("");
     setSelectedSex(null);
     setBirthDate(null);
     setPhoto(null);
   };
 
-  const handleRemoveBaby = (id: string, displayName: string) => {
-    Alert.alert(
-      "Supprimer le bébé",
-      `Supprimer ${displayName} et ses événements ?`,
-      [
-        { text: "Annuler", style: "cancel" },
-        { text: "Supprimer", style: "destructive", onPress: () => removeBaby(id) },
-      ]
-    );
+  // ✏️ Mode édition
+  const handleEditBaby = (baby: Baby) => {
+    setEditingBabyId(baby.id);
+    setNewBabyName(baby.name);
+    setSelectedSex(baby.gender);
+    setBirthDate(baby.birthDate ? new Date(baby.birthDate) : null);
+    setPhoto(baby.photo || null);
+    Alert.alert("Mode édition", `Vous modifiez ${baby.name}`);
+  };
+
+  // ❌ Suppression
+  const handleRemoveBaby = (id: string, name: string) => {
+    Alert.alert("Supprimer le bébé", `Supprimer ${name} et ses événements ?`, [
+      { text: "Annuler", style: "cancel" },
+      { text: "Supprimer", style: "destructive", onPress: () => removeBaby(id) },
+    ]);
   };
 
   return (
@@ -101,9 +127,11 @@ export default function ManageBabyModal() {
         </Pressable>
       </View>
 
-      {/* Ajouter bébé */}
+      {/* Formulaire */}
       <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Ajouter un bébé</Text>
+        <Text style={styles.sectionTitle}>
+          {editingBabyId ? "Modifier un bébé" : "Ajouter un bébé"}
+        </Text>
 
         {/* Photo */}
         <Pressable style={styles.imageContainer} onPress={pickImage}>
@@ -161,7 +189,7 @@ export default function ManageBabyModal() {
           </Pressable>
         </View>
 
-        {/* Date de naissance */}
+        {/* Date */}
         <Pressable
           style={styles.dateButton}
           onPress={() => setShowDatePicker(true)}
@@ -185,13 +213,15 @@ export default function ManageBabyModal() {
           />
         )}
 
-        {/* Bouton enregistrer */}
-        <Pressable onPress={handleAddBaby} style={styles.addButton}>
-          <Text style={styles.addButtonText}>Ajouter 👶</Text>
+        {/* Bouton principal */}
+        <Pressable onPress={handleAddOrEditBaby} style={styles.addButton}>
+          <Text style={styles.addButtonText}>
+            {editingBabyId ? "Modifier ✏️" : "Ajouter 👶"}
+          </Text>
         </Pressable>
       </View>
 
-      {/* Liste des bébés */}
+      {/* Liste */}
       <View style={styles.section}>
         <Text style={styles.sectionTitle}>Bébés existants</Text>
         {babies.length === 0 ? (
@@ -207,26 +237,27 @@ export default function ManageBabyModal() {
                 style={styles.listImage}
               />
               <View style={styles.babyInfo}>
-                <Text style={styles.babyName}>
-                  {typeof baby.name === "string" ? baby.name : baby.name?.name || "Bébé"}
-                </Text>
+                <Text style={styles.babyName}>{baby.name}</Text>
                 {baby.birthDate && (
                   <Text style={styles.babyDate}>
                     🎂 {new Date(baby.birthDate).toLocaleDateString("fr-FR")}
                   </Text>
                 )}
               </View>
-              <Pressable
-                onPress={() =>
-                  handleRemoveBaby(
-                    baby.id,
-                    typeof baby.name === "string" ? baby.name : baby.name?.name || "Bébé"
-                  )
-                }
-                style={styles.deleteButton}
-              >
-                <Text style={styles.deleteButtonText}>🗑️</Text>
-              </Pressable>
+              <View style={styles.actions}>
+                <Pressable
+                  onPress={() => handleEditBaby(baby)}
+                  style={styles.editButton}
+                >
+                  <Text style={styles.editButtonText}>Modifier ✏️</Text>
+                </Pressable>
+                <Pressable
+                  onPress={() => handleRemoveBaby(baby.id, baby.name)}
+                  style={styles.deleteButton}
+                >
+                  <Text style={styles.deleteButtonText}>🗑️</Text>
+                </Pressable>
+              </View>
             </View>
           ))
         )}
@@ -367,15 +398,34 @@ const styles = StyleSheet.create({
     fontSize: FontSize.sm,
     color: Colors.neutral.darkGray,
   },
+  actions: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+  },
+  editButton: {
+    backgroundColor: "#A3D9A5",
+    borderRadius: 8,
+    paddingVertical: 6,
+    paddingHorizontal: 10,
+  },
+  editButtonText: {
+    color: "#2C3E50",
+    fontWeight: "600",
+  },
   deleteButton: {
-    padding: Spacing.sm,
+    backgroundColor: "#F5B7B1",
+    borderRadius: 8,
+    paddingVertical: 6,
+    paddingHorizontal: 10,
   },
   deleteButtonText: {
-    fontSize: FontSize.lg,
+    color: "#fff",
+    fontWeight: "700",
   },
   emptyText: {
     color: Colors.neutral.darkGray,
     fontSize: FontSize.md,
-    textAlign: 'center',
+    textAlign: "center",
   },
 });

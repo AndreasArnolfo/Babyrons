@@ -28,6 +28,8 @@ export default function Index() {
     setSelectedBabyId(prev => prev === babyId ? null : babyId);
   };
 
+  const [displayName, setDisplayName] = useState<string>("");
+
   useEffect(() => {
     (async () => {
       const supabase = getSupabase();
@@ -35,11 +37,20 @@ export default function Index() {
         console.log('Supabase non configuré (variables manquantes)');
         return;
       }
-      const { data, error } = await supabase.from('test').select('*').limit(1);
-      console.log('Supabase OK?', !!data && !error, error?.message);
+      // try to fetch authenticated user from Supabase and set display name
+      try {
+        const { data: userData, error: userError } = await supabase.auth.getUser();
+        const user = userData?.user;
+        const email = user?.email || "";
+        setDisplayName(email ? email.split("@")[0] : "");
+
+        const { data, error } = await supabase.from('test').select('*').limit(1);
+        console.log('Supabase OK?', !!data && !error && !userError, (error || userError)?.message);
+      } catch (err) {
+        console.log('Erreur Supabase:', err);
+      }
     })();
   }, []);
-
 const logo = require("../../assets/images/logo-babyrons.png");
 const insets = useSafeAreaInsets();
   return (
@@ -47,12 +58,12 @@ const insets = useSafeAreaInsets();
       <View
       style={[
         styles.headerContainer,
-        { paddingTop: insets.top + 8 }, // ✅ marge dynamique selon appareil
+        { paddingTop: insets.top }, // ✅ marge dynamique selon appareil
       ]}
       ></View>
       <View style={styles.headerContainer}>
         <View style={styles.header}>
-          <Text style={styles.greeting}>Bonjour! 👋</Text>
+          <Text style={styles.greeting}>Bonjour {displayName} !</Text>
           <Image
             source={logo}
             style={styles.logo}

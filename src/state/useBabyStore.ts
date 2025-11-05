@@ -24,6 +24,7 @@ interface BabyStore {
   
   addEvent: (event: Omit<Event, 'id' | 'createdBy'>) => void;
   removeEvent: (id: string) => void;
+  updateEvent: (id: string, updates: Partial<Event>) => void;
   getEventsByBaby: (babyId: string) => Event[];
   getEventsByType: (type: ServiceType) => Event[];
   
@@ -148,6 +149,20 @@ export const useBabyStore = create<BabyStore>((set, get) => {
     get().saveToStorage();
     const userId = get().userId;
     if (userId) { void deleteEvent(userId, id); }
+  },
+  
+  updateEvent: (id: string, updates: Partial<Event>) => {
+    set(state => ({
+      events: state.events.map(e => 
+        e.id === id ? { ...e, ...updates } as Event : e
+      ),
+    }));
+    get().saveToStorage();
+    const userId = get().userId;
+    if (userId) {
+      const updatedEvent = get().events.find(e => e.id === id);
+      if (updatedEvent) { void upsertEvent(userId, updatedEvent); }
+    }
   },
   
   getEventsByBaby: (babyId: string) => {

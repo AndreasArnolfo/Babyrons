@@ -1,9 +1,10 @@
-import React from 'react';
-import { View, Text, StyleSheet } from 'react-native';
+import React, { useState } from 'react';
+import { View, Text, StyleSheet, Pressable, Modal, TextInput } from 'react-native';
 import { Event, BottleEvent, SleepEvent, MedEvent, DiaperEvent, GrowthEvent } from '../data/types';
 import { Colors } from '../theme/colors';
 import { Spacing, BorderRadius, FontSize } from '../theme/spacing';
 import { Ionicons } from '@expo/vector-icons';
+import { useBabyStore } from '../state/useBabyStore';
 
 interface EventCardProps {
   event: Event;
@@ -14,6 +15,30 @@ interface EventCardProps {
 function formatTime(timestamp: number): string {
   const date = new Date(timestamp);
   return date.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
+}
+
+function formatTimeForInput(timestamp: number): string {
+  const date = new Date(timestamp);
+  const hours = date.getHours().toString().padStart(2, '0');
+  const minutes = date.getMinutes().toString().padStart(2, '0');
+  return `${hours}:${minutes}`;
+}
+
+function parseTimeInput(timeStr: string, currentTimestamp: number): number {
+  if (!timeStr || timeStr.trim() === '') {
+    return currentTimestamp;
+  }
+  try {
+    const [hours, minutes] = timeStr.split(':').map(Number);
+    if (isNaN(hours) || isNaN(minutes) || hours < 0 || hours > 23 || minutes < 0 || minutes > 59) {
+      return currentTimestamp;
+    }
+    const date = new Date(currentTimestamp);
+    date.setHours(hours, minutes, 0, 0);
+    return date.getTime();
+  } catch {
+    return currentTimestamp;
+  }
 }
 
 function formatTimeSince(eventTimestamp: number): string {
@@ -94,25 +119,105 @@ function getEventDetails(event: Event): string {
 }
 
 export function EventCard({ event, babyName, allEvents = [] }: EventCardProps) {
+  const { updateEvent } = useBabyStore();
+  const [isEditingTime, setIsEditingTime] = useState(false);
+  const [timeInput, setTimeInput] = useState(formatTimeForInput(event.at));
+  
   // Pour les biberons, calculer le temps écoulé depuis le timestamp du biberon jusqu'à maintenant
   const timeSinceBottle = event.type === 'bottle' ? formatTimeSince(event.at) : null;
 
+  const handleTimePress = () => {
+    setIsEditingTime(true);
+    setTimeInput(formatTimeForInput(event.at));
+  };
+
+  const handleTimeInputChange = (text: string) => {
+    // Nettoyer le texte (garder seulement les chiffres et les deux-points)
+    let cleaned = text.replace(/[^\d:]/g, '');
+    
+    // Limiter à 5 caractères max (HH:MM)
+    if (cleaned.length > 5) {
+      cleaned = cleaned.slice(0, 5);
+    }
+    
+    // Ajouter automatiquement les deux-points après 2 chiffres
+    if (cleaned.length === 2 && !cleaned.includes(':')) {
+      cleaned = cleaned + ':';
+    }
+    
+    setTimeInput(cleaned);
+  };
+
+  const handleSaveTime = () => {
+    const newTimestamp = parseTimeInput(timeInput, event.at);
+    
+    // Pour les événements de sommeil, mettre à jour aussi startAt si nécessaire
+    if (event.type === 'sleep') {
+      const sleepEvent = event as SleepEvent;
+      const updates: Partial<SleepEvent> = { at: newTimestamp };
+      if (sleepEvent.startAt && sleepEvent.startAt === event.at) {
+        updates.startAt = newTimestamp;
+      }
+      updateEvent(event.id, updates);
+    } else {
+      updateEvent(event.id, { at: newTimestamp });
+    }
+    
+    setIsEditingTime(false);
+  };
+
+  const handleCancel = () => {
+    setIsEditingTime(false);
+    setTimeInput(formatTimeForInput(event.at));
+  };
+
   return (
-    <View style={styles.container}>
-      <View style={styles.iconContainer}>
-        <Ionicons name={getEventIcon(event.type)} size={24} color={Colors.pastel.mintActive} />
+    <>
+      <View style={styles.container}>
+        <View style={styles.iconContainer}>
+          <Ionicons name={getEventIcon(event.type)} size={24} color={Colors.pastel.mintActive} />
+        </View>
+        <View style={styles.content}>
+          <Text style={styles.babyName}>{babyName}</Text>
+          <Text style={styles.details}>{getEventDetails(event)}</Text>
+        </View>
+        <Pressable onPress={handleTimePress} style={styles.timeContainer}>
+          <Text style={styles.time}>{formatTime(event.at)}</Text>
+          {event.type === 'bottle' && timeSinceBottle && (
+            <Text style={styles.timeSince}>{timeSinceBottle}</Text>
+          )}
+        </Pressable>
       </View>
-      <View style={styles.content}>
-        <Text style={styles.babyName}>{babyName}</Text>
-        <Text style={styles.details}>{getEventDetails(event)}</Text>
-      </View>
-      <View style={styles.timeContainer}>
-        <Text style={styles.time}>{formatTime(event.at)}</Text>
-        {event.type === 'bottle' && timeSinceBottle && (
-          <Text style={styles.timeSince}>{timeSinceBottle}</Text>
-        )}
-      </View>
-    </View>
+
+      <Modal
+        visible={isEditingTime}
+        transparent
+        animationType="fade"
+        onRequestClose={handleCancel}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <Text style={styles.modalTitle}>Modifier l'heure</Text>
+            <TextInput
+              style={styles.timeInput}
+              value={timeInput}
+              onChangeText={handleTimeInputChange}
+              placeholder="HH:MM"
+              keyboardType="numeric"
+              maxLength={5}
+            />
+            <View style={styles.modalButtons}>
+              <Pressable onPress={handleCancel} style={[styles.modalButton, styles.cancelButton]}>
+                <Text style={styles.cancelButtonText}>Annuler</Text>
+              </Pressable>
+              <Pressable onPress={handleSaveTime} style={[styles.modalButton, styles.saveButton]}>
+                <Text style={styles.saveButtonText}>Enregistrer</Text>
+              </Pressable>
+            </View>
+          </View>
+        </View>
+      </Modal>
+    </>
   );
 }
 
@@ -154,15 +259,73 @@ const styles = StyleSheet.create({
   },
   timeContainer: {
     alignItems: 'flex-end',
+    padding: Spacing.xs,
+    borderRadius: BorderRadius.sm,
   },
   time: {
     fontSize: FontSize.sm,
     color: Colors.neutral.darkGray,
+    fontWeight: '500',
   },
   timeSince: {
     fontSize: FontSize.xs,
     color: Colors.neutral.darkGray,
     marginTop: 2,
     opacity: 0.7,
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  modalContent: {
+    backgroundColor: Colors.neutral.white,
+    borderRadius: BorderRadius.lg,
+    padding: Spacing.xl,
+    width: '80%',
+    maxWidth: 400,
+  },
+  modalTitle: {
+    fontSize: FontSize.xl,
+    fontWeight: '700',
+    color: Colors.neutral.charcoal,
+    marginBottom: Spacing.lg,
+    textAlign: 'center',
+  },
+  timeInput: {
+    borderWidth: 1,
+    borderColor: Colors.neutral.lightGray,
+    borderRadius: BorderRadius.md,
+    padding: Spacing.md,
+    fontSize: FontSize.lg,
+    textAlign: 'center',
+    marginBottom: Spacing.lg,
+    backgroundColor: Colors.neutral.lightGray,
+  },
+  modalButtons: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    gap: Spacing.md,
+  },
+  modalButton: {
+    flex: 1,
+    padding: Spacing.md,
+    borderRadius: BorderRadius.md,
+    alignItems: 'center',
+  },
+  cancelButton: {
+    backgroundColor: Colors.neutral.lightGray,
+  },
+  cancelButtonText: {
+    color: Colors.neutral.darkGray,
+    fontWeight: '600',
+  },
+  saveButton: {
+    backgroundColor: Colors.pastel.mintActive,
+  },
+  saveButtonText: {
+    color: Colors.neutral.white,
+    fontWeight: '600',
   },
 });

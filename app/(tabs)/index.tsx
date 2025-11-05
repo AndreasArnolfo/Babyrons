@@ -69,25 +69,30 @@ const insets = useSafeAreaInsets();
             <Text style={styles.manageButton}>Gérer</Text>
           </Pressable>
         </View>
-        <View style={styles.babiesContainer}>
-          {babies.length === 0 ? (
-            <View style={styles.emptyState}>
-              <Text style={styles.emptyText}>Aucun bébé ajouté</Text>
-              <Text style={styles.emptySubtext}>
-                Appuyez sur "Gérer" pour ajouter votre premier bébé
-              </Text>
-            </View>
-          ) : (
-            babies.map((baby) => (
+        {babies.length === 0 ? (
+          <View style={styles.emptyState}>
+            <Text style={styles.emptyText}>Aucun bébé ajouté</Text>
+            <Text style={styles.emptySubtext}>
+              Appuyez sur "Gérer" pour ajouter votre premier bébé
+            </Text>
+          </View>
+        ) : (
+          <ScrollView 
+            horizontal 
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={styles.babiesContainer}
+            style={styles.babiesScrollView}
+          >
+            {babies.map((baby) => (
               <BabyCard 
                 key={baby.id} 
                 baby={baby} 
                 onPress={() => handleBabyPress(baby.id)}
                 isSelected={selectedBabyId === baby.id}
               />
-            ))
-          )}
-        </View>
+            ))}
+          </ScrollView>
+        )}
       </View>
 
       <View style={styles.section}>
@@ -144,6 +149,14 @@ const insets = useSafeAreaInsets();
 }
 
 const styles = StyleSheet.create({
+  babiesScrollView: {
+    marginHorizontal: -Spacing.lg,
+  },
+  babiesContainer: {
+    flexDirection: 'row',
+    paddingHorizontal: Spacing.lg,
+    paddingVertical: Spacing.sm,
+  },
   container: {
     flex: 1,
     backgroundColor: Colors.neutral.lightGray,

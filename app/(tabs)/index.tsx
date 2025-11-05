@@ -44,19 +44,20 @@ export default function Index() {
             <Text style={styles.manageButton}>Gérer</Text>
           </Pressable>
         </View>
-
-        {babies.length === 0 ? (
-          <View style={styles.emptyState}>
-            <Text style={styles.emptyText}>Aucun bébé ajouté</Text>
-            <Text style={styles.emptySubtext}>
-              Appuyez sur "Gérer" pour ajouter votre premier bébé
-            </Text>
-          </View>
-        ) : (
-          babies.map((baby) => (
-            <BabyCard key={baby.id} baby={baby} />
-          ))
-        )}
+        <View style={styles.babiesContainer}>
+          {babies.length === 0 ? (
+            <View style={styles.emptyState}>
+              <Text style={styles.emptyText}>Aucun bébé ajouté</Text>
+              <Text style={styles.emptySubtext}>
+                Appuyez sur "Gérer" pour ajouter votre premier bébé
+              </Text>
+            </View>
+          ) : (
+            babies.map((baby) => (
+              <BabyCard key={baby.id} baby={baby} />
+            ))
+          )}
+        </View>
       </View>
 
       <View style={styles.section}>
@@ -94,6 +95,12 @@ export default function Index() {
 }
 
 const styles = StyleSheet.create({
+  babiesContainer: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    alignItems: 'center',
+    gap: Spacing.md,
+  },
   container: {
     flex: 1,
     backgroundColor: Colors.neutral.lightGray,
@@ -117,6 +124,7 @@ const styles = StyleSheet.create({
   },
   section: {
     padding: Spacing.lg,
+
   },
   sectionHeader: {
     flexDirection: "row",

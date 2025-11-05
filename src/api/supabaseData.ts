@@ -1,8 +1,9 @@
 import { getSupabase } from '../utils/supabase';
 import { Baby, Event, AppSettings } from '../data/types';
+import { ExtendedBaby } from '../state/useBabyStore';
 
 // Babies
-export async function fetchBabies(userId: string): Promise<Baby[]> {
+export async function fetchBabies(userId: string): Promise<ExtendedBaby[]> {
   const supabase = getSupabase();
   if (!supabase) return [];
   const { data, error } = await supabase
@@ -18,12 +19,14 @@ export async function fetchBabies(userId: string): Promise<Baby[]> {
     id: row.id,
     name: row.name,
     color: row.color,
-    photoUrl: row.photo_url ?? undefined,
+    photo: row.photo ?? null,
+    gender: row.gender ?? null,
+    birthDate: row.birth_date ? Number(row.birth_date) : null,
     createdAt: Number(row.created_at) || Date.now(),
   }));
 }
 
-export async function upsertBaby(userId: string, baby: Baby): Promise<void> {
+export async function upsertBaby(userId: string, baby: ExtendedBaby): Promise<void> {
   const supabase = getSupabase();
   if (!supabase) return;
   const { error } = await supabase.from('babies').upsert({
@@ -31,7 +34,9 @@ export async function upsertBaby(userId: string, baby: Baby): Promise<void> {
     user_id: userId,
     name: baby.name,
     color: baby.color,
-    photo_url: baby.photoUrl ?? null,
+    photo: baby.photo ?? null,
+    gender: baby.gender ?? null,
+    birth_date: baby.birthDate ?? null,
     created_at: baby.createdAt,
   });
   if (error) console.warn('upsertBaby error', error.message);
@@ -110,6 +115,39 @@ export async function deleteEvent(userId: string, eventId: string): Promise<void
   if (!supabase) return;
   const { error } = await supabase.from('events').delete().match({ user_id: userId, id: eventId });
   if (error) console.warn('deleteEvent error', error.message);
+}
+
+// Settings
+export async function fetchSettings(userId: string): Promise<AppSettings | null> {
+  const supabase = getSupabase();
+  if (!supabase) return null;
+  const { data, error } = await supabase
+    .from('settings')
+    .select('*')
+    .eq('user_id', userId)
+    .single();
+  if (error) {
+    console.warn('fetchSettings error', error.message);
+    return null;
+  }
+  if (!data) return null;
+  return {
+    enabledServices: data.enabled_services || ['bottle', 'sleep', 'med', 'diaper', 'growth'],
+    theme: data.theme || 'pastel',
+    isPro: data.is_pro || false,
+  };
+}
+
+export async function upsertSettings(userId: string, settings: AppSettings): Promise<void> {
+  const supabase = getSupabase();
+  if (!supabase) return;
+  const { error } = await supabase.from('settings').upsert({
+    user_id: userId,
+    enabled_services: settings.enabledServices,
+    theme: settings.theme,
+    is_pro: settings.isPro,
+  });
+  if (error) console.warn('upsertSettings error', error.message);
 }
 
 

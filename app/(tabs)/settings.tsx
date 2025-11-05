@@ -1,10 +1,11 @@
-import React from "react";
-import { ScrollView, View, Text, StyleSheet, Switch, Pressable } from "react-native";
+import React, { useState } from "react";
+import { ScrollView, View, Text, StyleSheet, Switch, Pressable, Alert, ActivityIndicator } from "react-native";
 import { useBabyStore } from "../../src/state/useBabyStore";
 import { useSupabaseAuth } from "../../src/hooks/useSupabaseAuth";
 import { ServiceType } from "../../src/data/types";
 import { Colors } from "../../src/theme/colors";
 import { Spacing, BorderRadius, FontSize } from "../../src/theme/spacing";
+import { exportDataToPDF } from "../../src/lib/pdfExport";
 
 const serviceLabels: Record<ServiceType, string> = {
   bottle: "🍼 Biberons",
@@ -15,8 +16,30 @@ const serviceLabels: Record<ServiceType, string> = {
 };
 
 export default function Settings() {
-  const { settings, toggleService, updateSettings } = useBabyStore();
+  const { settings, toggleService, updateSettings, babies, events } = useBabyStore();
   const { session, signOut } = useSupabaseAuth();
+  const [isExporting, setIsExporting] = useState(false);
+
+  const handleExportPDF = async () => {
+    try {
+      setIsExporting(true);
+      await exportDataToPDF(babies, events);
+      Alert.alert(
+        'Export réussi !',
+        'Votre rapport PDF a été généré avec succès.',
+        [{ text: 'OK' }]
+      );
+    } catch (error) {
+      console.error('Erreur lors de l\'export PDF:', error);
+      Alert.alert(
+        'Erreur',
+        error instanceof Error ? error.message : 'Une erreur est survenue lors de l\'export PDF.',
+        [{ text: 'OK' }]
+      );
+    } finally {
+      setIsExporting(false);
+    }
+  };
 
   return (
     <View style={styles.container}>
@@ -46,6 +69,27 @@ export default function Settings() {
               />
             </View>
           ))}
+        </View>
+
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Export de données</Text>
+          <View style={styles.exportCard}>
+            <Text style={styles.exportTitle}>📄 Exporter en PDF</Text>
+            <Text style={styles.exportDescription}>
+              Générez un rapport PDF complet avec tous vos bébés et leurs événements
+            </Text>
+            <Pressable 
+              style={[styles.exportButton, isExporting && styles.exportButtonDisabled]} 
+              onPress={handleExportPDF}
+              disabled={isExporting}
+            >
+              {isExporting ? (
+                <ActivityIndicator color={Colors.neutral.white} />
+              ) : (
+                <Text style={styles.exportButtonText}>Exporter en PDF</Text>
+              )}
+            </Pressable>
+          </View>
         </View>
 
         <View style={styles.section}>
@@ -200,6 +244,38 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   logoutButtonText: {
+    fontSize: FontSize.md,
+    fontWeight: '700',
+    color: Colors.neutral.white,
+  },
+  exportCard: {
+    backgroundColor: Colors.neutral.white,
+    borderRadius: BorderRadius.lg,
+    padding: Spacing.lg,
+    borderWidth: 2,
+    borderColor: Colors.pastel.mintActive,
+  },
+  exportTitle: {
+    fontSize: FontSize.lg,
+    fontWeight: '700',
+    color: Colors.neutral.charcoal,
+    marginBottom: Spacing.sm,
+  },
+  exportDescription: {
+    fontSize: FontSize.sm,
+    color: Colors.neutral.darkGray,
+    marginBottom: Spacing.md,
+  },
+  exportButton: {
+    backgroundColor: Colors.pastel.mintActive,
+    borderRadius: BorderRadius.md,
+    padding: Spacing.md,
+    alignItems: 'center',
+  },
+  exportButtonDisabled: {
+    opacity: 0.6,
+  },
+  exportButtonText: {
     fontSize: FontSize.md,
     fontWeight: '700',
     color: Colors.neutral.white,

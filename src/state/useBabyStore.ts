@@ -1,16 +1,22 @@
 import { create } from 'zustand';
 import { Baby, Event, AppSettings, ServiceType } from '../data/types';
-import { storage, StorageKeys, getStorageItem, setStorageItem } from '../lib/storage';
+import { StorageKeys, getStorageItem, setStorageItem } from '../lib/storage';
 import { babyColors } from '../theme/colors';
 
+// 🍼 Nouveau : interface Baby enrichie
+export interface ExtendedBaby extends Baby {
+  gender?: 'male' | 'female' | null;
+  photo: string | null;
+}
+
 interface BabyStore {
-  babies: Baby[];
+  babies: ExtendedBaby[];
   events: Event[];
   settings: AppSettings;
   
-  addBaby: (name: string) => void;
+  addBaby: (babyData: { name: string; gender?: 'male' | 'female' | null; birthDate?: number | null; photo?: string | null }) => void;
   removeBaby: (id: string) => void;
-  updateBaby: (id: string, updates: Partial<Baby>) => void;
+  updateBaby: (id: string, updates: Partial<ExtendedBaby>) => void;
   
   addEvent: (event: Omit<Event, 'id' | 'createdBy'>) => void;
   removeEvent: (id: string) => void;
@@ -32,7 +38,7 @@ const defaultSettings: AppSettings = {
 
 export const useBabyStore = create<BabyStore>((set, get) => {
   const initialState = {
-    babies: getStorageItem<Baby[]>(StorageKeys.BABIES) || [],
+    babies: getStorageItem<ExtendedBaby[]>(StorageKeys.BABIES) || [],
     events: getStorageItem<Event[]>(StorageKeys.EVENTS) || [],
     settings: getStorageItem<AppSettings>(StorageKeys.SETTINGS) || defaultSettings,
   };
@@ -40,15 +46,26 @@ export const useBabyStore = create<BabyStore>((set, get) => {
   return {
     ...initialState,
   
-  addBaby: (name: string) => {
+  // ✅ MODIFIÉ : prend maintenant un objet complet pour le bébé
+  addBaby: (babyData) => {
     const babies = get().babies;
     const colorIndex = babies.length % babyColors.length;
-    const newBaby: Baby = {
+
+    const newBaby: ExtendedBaby = {
       id: `baby-${Date.now()}`,
-      name,
-      color: babyColors[colorIndex],
+      name: babyData.name,
+      gender: babyData.gender || null,
+      birthDate: babyData.birthDate || null,
+      photo: babyData.photo || null,
+      color:
+        babyData.gender === 'male'
+          ? '#9CC6E7'
+          : babyData.gender === 'female'
+          ? '#E8B7D4'
+          : babyColors[colorIndex],
       createdAt: Date.now(),
     };
+
     set({ babies: [...babies, newBaby] });
     get().saveToStorage();
   },
@@ -61,7 +78,7 @@ export const useBabyStore = create<BabyStore>((set, get) => {
     get().saveToStorage();
   },
   
-  updateBaby: (id: string, updates: Partial<Baby>) => {
+  updateBaby: (id: string, updates: Partial<ExtendedBaby>) => {
     set(state => ({
       babies: state.babies.map(b => b.id === id ? { ...b, ...updates } : b),
     }));
@@ -114,7 +131,7 @@ export const useBabyStore = create<BabyStore>((set, get) => {
   },
   
   loadFromStorage: () => {
-    const babies = getStorageItem<Baby[]>(StorageKeys.BABIES) || [];
+    const babies = getStorageItem<ExtendedBaby[]>(StorageKeys.BABIES) || [];
     const events = getStorageItem<Event[]>(StorageKeys.EVENTS) || [];
     const settings = getStorageItem<AppSettings>(StorageKeys.SETTINGS) || defaultSettings;
     set({ babies, events, settings });

@@ -3,8 +3,10 @@ export type ServiceType = "bottle" | "sleep" | "med" | "diaper" | "growth";
 export interface Baby {
   id: string;
   name: string;
-  color: string;
-  photoUrl?: string;
+  gender?: "male" | "female" | null;
+  birthDate?: number | null; // ✅ timestamp
+  photo?: string | null;
+  color?: string;
   createdAt: number;
 }
 

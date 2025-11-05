@@ -43,7 +43,8 @@ export default function ManageBabyModal() {
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [editingBabyId, setEditingBabyId] = useState<string | null>(null);
 
-  const defaultImage = require("../../assets/images/baby-placeholder.png");
+  const defaultImageM = require("../../assets/images/baby_placeholder_m.png");
+  const defaultImageF = require("../../assets/images/baby_placeholder_f.png");
 
   // 🍼 Choix photo
   const pickImage = async () => {
@@ -136,7 +137,15 @@ export default function ManageBabyModal() {
         {/* Photo */}
         <Pressable style={styles.imageContainer} onPress={pickImage}>
           <Image
-            source={photo ? { uri: photo } : defaultImage}
+            source={
+              photo
+                ? { uri: photo }
+                : selectedSex === "female"
+                ? defaultImageF
+                : selectedSex === "male"
+                ? defaultImageM
+                : require("../../assets/images/baby-placeholder.png") // neutre
+            }
             style={styles.image}
           />
           <Text style={styles.imageText}>
@@ -228,13 +237,23 @@ export default function ManageBabyModal() {
           <Text style={styles.emptyText}>Aucun bébé ajouté.</Text>
         ) : (
           babies.map((baby) => (
+            console.log("Rendu du bébé:", baby),
             <View
               key={baby.id}
               style={[styles.babyCard, { borderLeftColor: baby.color || "#9CBEB3" }]}
             >
               <Image
-                source={baby.photo ? { uri: baby.photo } : defaultImage}
-                style={styles.listImage}
+                source={
+                  photo
+                    ? { uri: photo }
+                    : baby.gender === "female"
+                    ? defaultImageF
+                    : baby.gender === "male"
+                    ? defaultImageM
+                    : require("../../assets/images/baby-placeholder.png")
+                }
+                key={`${baby.gender}-${photo}`} // ✅ force le rafraîchissement quand le sexe change
+                style={styles.image}
               />
               <View style={styles.babyInfo}>
                 <Text style={styles.babyName}>{baby.name}</Text>

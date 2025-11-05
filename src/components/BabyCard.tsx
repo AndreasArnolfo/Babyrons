@@ -12,6 +12,8 @@ interface BabyCardProps {
 
 export function BabyCard({ baby, onPress, isSelected = false }: BabyCardProps) {
   const defaultImage = require("../../assets/images/baby-placeholder.png");
+  const defaultImageM = require("../../assets/images/baby_placeholder_m.png");
+  const defaultImageF = require("../../assets/images/baby_placeholder_f.png");
 
   // 🧩 Sécurisation de la donnée (si baby.name est un objet, on récupère le vrai nom)
   const babyName =
@@ -20,6 +22,14 @@ export function BabyCard({ baby, onPress, isSelected = false }: BabyCardProps) {
       : (typeof baby.name === "object" && baby.name !== null && "name" in baby.name
         ? String((baby.name as { name: string }).name)
         : "Bébé");
+
+  const imageSource = baby.photo
+    ? { uri: baby.photo }
+    : baby.gender === "female"
+    ? defaultImageF
+    : baby.gender === "male"
+    ? defaultImageM
+    : defaultImage;
 
   return (
     <Pressable
@@ -33,7 +43,7 @@ export function BabyCard({ baby, onPress, isSelected = false }: BabyCardProps) {
     >
       <View style={styles.imageContainer}>
         <Image
-          source={baby.photo ? { uri: baby.photo } : defaultImage}
+          source={imageSource}
           style={styles.image}
           resizeMode="cover"
         />

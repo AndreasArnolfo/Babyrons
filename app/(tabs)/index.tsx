@@ -6,6 +6,7 @@ import { BabyCard } from "../../src/components/BabyCard";
 import { EventCard } from "../../src/components/EventCard";
 import { Colors } from "../../src/theme/colors";
 import { Spacing, BorderRadius, FontSize } from "../../src/theme/spacing";
+import { getSupabase } from '@/src/utils/supabase';
 
 export default function Index() {
   const router = useRouter();
@@ -14,6 +15,18 @@ export default function Index() {
   const recentEvents = [...events]
     .sort((a, b) => b.at - a.at)
     .slice(0, 10);
+
+  useEffect(() => {
+    (async () => {
+      const supabase = getSupabase();
+      if (!supabase) {
+        console.log('Supabase non configuré (variables manquantes)');
+        return;
+      }
+      const { data, error } = await supabase.from('test').select('*').limit(1);
+      console.log('Supabase OK?', !!data && !error, error?.message);
+    })();
+  }, []);
 
   return (
     <ScrollView style={styles.container}>

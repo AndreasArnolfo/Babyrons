@@ -1,6 +1,7 @@
 import React from "react";
 import { ScrollView, View, Text, StyleSheet, Switch, Pressable } from "react-native";
 import { useBabyStore } from "../../src/state/useBabyStore";
+import { useSupabaseAuth } from "../../src/hooks/useSupabaseAuth";
 import { ServiceType } from "../../src/data/types";
 import { Colors } from "../../src/theme/colors";
 import { Spacing, BorderRadius, FontSize } from "../../src/theme/spacing";
@@ -15,6 +16,7 @@ const serviceLabels: Record<ServiceType, string> = {
 
 export default function Settings() {
   const { settings, toggleService, updateSettings } = useBabyStore();
+  const { session, signOut } = useSupabaseAuth();
 
   return (
     <View style={styles.container}>
@@ -72,6 +74,20 @@ export default function Settings() {
             Suivi des bébés pour parents de jumeaux et triplés{'\n'}
             © 2025 - MIT License
           </Text>
+        </View>
+
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Compte</Text>
+          {session ? (
+            <View style={styles.accountCard}>
+              <Text style={styles.accountEmail}>{session.user.email}</Text>
+              <Pressable style={styles.logoutButton} onPress={signOut}>
+                <Text style={styles.logoutButtonText}>Se déconnecter</Text>
+              </Pressable>
+            </View>
+          ) : (
+            <Text style={styles.aboutText}>Non connecté</Text>
+          )}
         </View>
       </ScrollView>
     </View>
@@ -164,5 +180,27 @@ const styles = StyleSheet.create({
     borderRadius: BorderRadius.md,
     padding: Spacing.md,
     lineHeight: 20,
+  },
+  accountCard: {
+    backgroundColor: Colors.neutral.white,
+    borderRadius: BorderRadius.lg,
+    padding: Spacing.lg,
+  },
+  accountEmail: {
+    fontSize: FontSize.md,
+    color: Colors.neutral.charcoal,
+    marginBottom: Spacing.md,
+    fontWeight: '600',
+  },
+  logoutButton: {
+    backgroundColor: Colors.semantic.error,
+    borderRadius: BorderRadius.md,
+    padding: Spacing.md,
+    alignItems: 'center',
+  },
+  logoutButtonText: {
+    fontSize: FontSize.md,
+    fontWeight: '700',
+    color: Colors.neutral.white,
   },
 });

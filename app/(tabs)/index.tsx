@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { ScrollView, View, Text, StyleSheet, Pressable } from "react-native";
+import { ScrollView, View, Text, StyleSheet, Pressable, Image } from "react-native";
 import { useRouter } from "expo-router";
 import { useBabyStore } from "../../src/state/useBabyStore";
 import { BabyCard } from "../../src/components/BabyCard";
@@ -39,15 +39,111 @@ export default function Index() {
     })();
   }, []);
 
+const logo = require("../../assets/images/logo-babyrons.png");
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: Colors.neutral.lightGray,
+  },
+  header: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    backgroundColor: "#AAEBA7", // 💚 vert pastel doux
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    borderBottomLeftRadius: 20, // arrondis doux
+    borderBottomRightRadius: 20,
+    shadowColor: "#000",
+    shadowOpacity: 0.05,
+    shadowOffset: { width: 0, height: 3 },
+    shadowRadius: 4,
+    elevation: 2, // effet subtil sur Android
+  },
+  greeting: {
+    fontSize: 22,
+    fontWeight: "700",
+    color: "#2C3E50",
+  },
+  title: {
+    fontSize: FontSize.xxl,
+    fontWeight: "bold",
+    color: Colors.neutral.charcoal,
+  },
+  image: {
+    width: 120,
+    height: 120,
+    borderRadius: 60,
+    alignSelf: "center",
+    marginVertical: Spacing.lg,
+    backgroundColor: Colors.neutral.white,
+  },
+  section: {
+    padding: Spacing.lg,
+  },
+  sectionHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: Spacing.md,
+  },
+  sectionTitle: {
+    fontSize: FontSize.xl,
+    fontWeight: "700",
+    color: Colors.neutral.charcoal,
+  },
+  manageButton: {
+    fontSize: FontSize.md,
+    color: Colors.pastel.mintActive,
+    fontWeight: "600",
+  },
+  addButton: {
+    fontSize: FontSize.md,
+    color: Colors.pastel.mintActive,
+    fontWeight: "600",
+  },
+  emptyState: {
+    backgroundColor: Colors.neutral.white,
+    borderRadius: BorderRadius.lg,
+    padding: Spacing.xl,
+    alignItems: "center",
+  },
+  emptyText: {
+    fontSize: FontSize.lg,
+    fontWeight: "600",
+    color: Colors.neutral.darkGray,
+    marginBottom: Spacing.xs,
+  },
+  emptySubtext: {
+    fontSize: FontSize.sm,
+    color: Colors.neutral.darkGray,
+    textAlign: "center",
+  },
+  logo: {
+    width: 60,       // ✅ adapte selon ton image
+    height: 60,
+    tintColor: undefined, // garde les vraies couleurs
+    backgroundColor: "transparent", // ✅ fond transparent
+  },
+  babiesContainer: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: Spacing.md,
+    marginBottom: Spacing.md,
+  },
+});
+
   return (
     <ScrollView style={styles.container}>
       <View style={styles.header}>
-        <View>
-          <Text style={styles.greeting}>Bonjour! 👋</Text>
-          <Text style={styles.title}>Babyrons</Text>
-        </View>
+        <Text style={styles.greeting}>Bonjour! 👋</Text>
+        <Image
+          source={logo}
+          style={styles.logo}
+          resizeMode="contain"
+        />
       </View>
-
+      
       <View style={styles.section}>
         <View style={styles.sectionHeader}>
           <Text style={styles.sectionTitle}>Vos bébés</Text>
@@ -166,7 +262,6 @@ const styles = StyleSheet.create({
   },
   section: {
     padding: Spacing.lg,
-
   },
   sectionHeader: {
     flexDirection: "row",
@@ -205,22 +300,5 @@ const styles = StyleSheet.create({
     fontSize: FontSize.sm,
     color: Colors.neutral.darkGray,
     textAlign: "center",
-  },
-  sectionTitleContainer: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: Spacing.sm,
-  },
-  clearFilterButton: {
-    paddingHorizontal: Spacing.sm,
-    paddingVertical: Spacing.xs,
-    borderRadius: BorderRadius.sm,
-    backgroundColor: Colors.neutral.lightGray,
-  },
-  clearFilterText: {
-    fontSize: FontSize.xs,
-    color: Colors.neutral.darkGray,
-    fontWeight: '500',
   },
 });

@@ -2,6 +2,7 @@ import { create } from 'zustand';
 import { Baby, Event, AppSettings, ServiceType } from '../data/types';
 import { StorageKeys, getStorageItem, setStorageItem } from '../lib/storage';
 import { babyColors } from '../theme/colors';
+import { fetchBabies, fetchEvents, upsertBaby, deleteBabyAndEvents, upsertEvent, deleteEvent } from '../api/supabaseData';
 
 // 🍼 Nouveau : interface Baby enrichie
 export interface ExtendedBaby extends Baby {
@@ -13,6 +14,9 @@ interface BabyStore {
   babies: ExtendedBaby[];
   events: Event[];
   settings: AppSettings;
+  userId?: string | null;
+  setUserId: (userId: string | null) => void;
+  loadFromSupabase: () => Promise<void>;
   
   addBaby: (babyData: { name: string; gender?: 'male' | 'female' | null; birthDate?: number | null; photo?: string | null }) => void;
   removeBaby: (id: string) => void;
@@ -45,6 +49,22 @@ export const useBabyStore = create<BabyStore>((set, get) => {
 
   return {
     ...initialState,
+    userId: null,
+
+  setUserId: (userId: string | null) => {
+    set({ userId });
+  },
+
+  loadFromSupabase: async () => {
+    const userId = get().userId;
+    if (!userId) return;
+    const [babies, events] = await Promise.all([
+      fetchBabies(userId),
+      fetchEvents(userId),
+    ]);
+    set({ babies, events });
+    get().saveToStorage();
+  },
   
   // ✅ MODIFIÉ : prend maintenant un objet complet pour le bébé
   addBaby: (babyData) => {
@@ -68,6 +88,8 @@ export const useBabyStore = create<BabyStore>((set, get) => {
 
     set({ babies: [...babies, newBaby] });
     get().saveToStorage();
+    const userId = get().userId;
+    if (userId) { void upsertBaby(userId, newBaby); }
   },
   
   removeBaby: (id: string) => {
@@ -76,6 +98,8 @@ export const useBabyStore = create<BabyStore>((set, get) => {
       events: state.events.filter(e => e.babyId !== id),
     }));
     get().saveToStorage();
+    const userId = get().userId;
+    if (userId) { void deleteBabyAndEvents(userId, id); }
   },
   
   updateBaby: (id: string, updates: Partial<ExtendedBaby>) => {
@@ -83,6 +107,11 @@ export const useBabyStore = create<BabyStore>((set, get) => {
       babies: state.babies.map(b => b.id === id ? { ...b, ...updates } : b),
     }));
     get().saveToStorage();
+    const userId = get().userId;
+    if (userId) {
+      const baby = get().babies.find(b => b.id === id);
+      if (baby) { void upsertBaby(userId, baby); }
+    }
   },
   
   addEvent: (event: Omit<Event, 'id' | 'createdBy'>) => {
@@ -93,6 +122,8 @@ export const useBabyStore = create<BabyStore>((set, get) => {
     } as Event;
     set(state => ({ events: [...state.events, newEvent] }));
     get().saveToStorage();
+    const userId = get().userId;
+    if (userId) { void upsertEvent(userId, newEvent); }
   },
   
   removeEvent: (id: string) => {
@@ -100,6 +131,8 @@ export const useBabyStore = create<BabyStore>((set, get) => {
       events: state.events.filter(e => e.id !== id),
     }));
     get().saveToStorage();
+    const userId = get().userId;
+    if (userId) { void deleteEvent(userId, id); }
   },
   
   getEventsByBaby: (babyId: string) => {

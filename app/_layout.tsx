@@ -32,6 +32,18 @@ export default function RootLayout() {
     // Laisser passer les modals et autres routes
   }, [session, loading, segments]);
 
+  // Charger les données utilisateur depuis Supabase à la connexion
+  useEffect(() => {
+    const { useBabyStore } = require('../src/state/useBabyStore');
+    const store = useBabyStore.getState();
+    if (session?.user?.id) {
+      store.setUserId(session.user.id);
+      store.loadFromSupabase();
+    } else {
+      store.setUserId(null);
+    }
+  }, [session]);
+
   if (loading) {
     return (
       <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: Colors.neutral.lightGray }}>

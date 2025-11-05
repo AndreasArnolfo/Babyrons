@@ -1,9 +1,27 @@
 import * as Print from 'expo-print';
 import * as Sharing from 'expo-sharing';
+import * as FileSystem from 'expo-file-system';
+import { Asset } from 'expo-asset';
 import { ExtendedBaby } from '../state/useBabyStore';
 import { Event, BottleEvent, SleepEvent, MedEvent, DiaperEvent, GrowthEvent } from '../data/types';
 
 export async function exportDataToPDF(babies: ExtendedBaby[], events: Event[]): Promise<void> {
+  // Charger le logo en base64
+  let logoBase64 = '';
+  try {
+    const logoModule = require('../../assets/images/logo-babyrons.png');
+    const asset = Asset.fromModule(logoModule);
+    await asset.downloadAsync();
+    if (asset.localUri) {
+      const base64 = await FileSystem.readAsStringAsync(asset.localUri, {
+        encoding: FileSystem.EncodingType.Base64,
+      });
+      logoBase64 = `data:image/png;base64,${base64}`;
+    }
+  } catch (error) {
+    console.warn('Impossible de charger le logo:', error);
+    // Continuer sans logo si erreur
+  }
   // Formatage des événements
   const formatEventDetails = (event: Event): string => {
     switch (event.type) {
@@ -78,11 +96,28 @@ export async function exportDataToPDF(babies: ExtendedBaby[], events: Event[]): 
           font-family: Arial, sans-serif;
           padding: 40px;
           color: #333;
+          position: relative;
+        }
+        .header-container {
+          position: relative;
+          margin-bottom: 20px;
+        }
+        .logo-container {
+          position: absolute;
+          top: 0;
+          right: 0;
+          z-index: 10;
+        }
+        .logo {
+          width: 80px;
+          height: 80px;
+          object-fit: contain;
         }
         h1 {
           color: #FF6B9D;
           font-size: 28px;
           margin-bottom: 10px;
+          padding-right: 100px;
         }
         .subtitle {
           color: #666;
@@ -140,8 +175,11 @@ export async function exportDataToPDF(babies: ExtendedBaby[], events: Event[]): 
       </style>
     </head>
     <body>
-      <h1>🍼 Babyrons - Rapport des données</h1>
-      <div class="subtitle">Généré le ${dateStr} à ${timeStr}</div>
+      <div class="header-container">
+        ${logoBase64 ? `<div class="logo-container"><img src="${logoBase64}" alt="Logo Babyrons" class="logo" /></div>` : ''}
+        <h1>🍼 Babyrons - Rapport des données</h1>
+        <div class="subtitle">Généré le ${dateStr} à ${timeStr}</div>
+      </div>
       
       <h2>Vos bébés</h2>
   `;

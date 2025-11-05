@@ -125,6 +125,12 @@ const styles = StyleSheet.create({
     tintColor: undefined, // garde les vraies couleurs
     backgroundColor: "transparent", // ✅ fond transparent
   },
+  babiesContainer: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: Spacing.md,
+    marginBottom: Spacing.md,
+  },
 });
 
   return (

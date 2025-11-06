@@ -9,6 +9,7 @@ import { Colors } from "../../src/theme/colors";
 import { Spacing, BorderRadius, FontSize } from "../../src/theme/spacing";
 import { getSupabase } from '@/src/utils/supabase';
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { Alert } from "react-native";
 
 export default function Index() {
   const router = useRouter();
@@ -27,6 +28,32 @@ export default function Index() {
   const handleBabyPress = (babyId: string) => {
     // Si on clique sur le même bébé, on désélectionne
     setSelectedBabyId(prev => prev === babyId ? null : babyId);
+  };
+
+  const handleDeleteEvent = async (eventId: string) => {
+    const supabase = getSupabase();
+
+    if (!supabase) {
+      console.error("Supabase non configuré (variables manquantes)");
+      Alert.alert("Erreur", "Impossible de supprimer l'événement : Supabase non configuré.");
+      return;
+    }
+
+    console.log("🗑 Tentative suppression event :", eventId);
+
+    const { data, error } = await supabase
+      .from("events")        // ✅ une seule table
+      .delete()
+      .eq("id", eventId)
+      .select();
+
+    if (error) {
+      console.error("❌ Erreur Supabase :", error.message);
+      Alert.alert("Erreur", "Impossible de supprimer l'événement : " + error.message);
+    } else {
+      console.log("✅ Événement supprimé :", data);
+      useBabyStore.getState().removeEvent(eventId);
+    }
   };
 
   const [displayName, setDisplayName] = useState<string>("");
@@ -151,7 +178,7 @@ const insets = useSafeAreaInsets();
                 key={event.id}
                 event={event}
                 babyName={baby?.name || "Inconnu"}
-                allEvents={events}
+                onDelete={() => handleDeleteEvent(event.id)}
               />
             );
           })

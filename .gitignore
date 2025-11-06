@@ -54,6 +54,7 @@ Thumbs.db
 
 # --- Android ---
 # Dossiers de build Gradle
+/android/ 
 /android/build/
 /android/app/build/
 # Cache Gradle
@@ -61,7 +62,6 @@ Thumbs.db
 # Fichier de configuration local (contient le chemin du SDK)
 /android/local.properties
 # Fichiers binaires
-*.apk
 *.aab
 # Fichiers Keystore (TRÈS IMPORTANT pour la sécurité)
 # Utilisés pour signer votre application pour le Play Store

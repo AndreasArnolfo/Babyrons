@@ -9,7 +9,8 @@ import { useBabyStore } from '../state/useBabyStore';
 interface EventCardProps {
   event: Event;
   babyName: string;
-  allEvents?: Event[]; // Gardé pour compatibilité mais plus utilisé
+  allEvents?: Event[];
+  onDelete?: (id: string) => void;
 }
 
 function formatTime(timestamp: number): string {
@@ -128,7 +129,7 @@ function getEventDetails(event: Event): string {
   }
 }
 
-export function EventCard({ event, babyName, allEvents = [] }: EventCardProps) {
+export function EventCard({ event, babyName, allEvents = [], onDelete }: EventCardProps) {
   const { updateEvent } = useBabyStore();
   const [isEditingTime, setIsEditingTime] = useState(false);
   const [timeInput, setTimeInput] = useState(formatTimeForInput(event.at));
@@ -211,12 +212,30 @@ export function EventCard({ event, babyName, allEvents = [] }: EventCardProps) {
           <Text style={styles.babyName}>{babyName}</Text>
           <Text style={styles.details}>{getEventDetails(event)}</Text>
         </View>
-        <Pressable onPress={handleTimePress} style={styles.timeContainer}>
-          <Text style={styles.time}>{formatTime(event.at)}</Text>
-          {event.type === 'bottle' && timeSinceBottle && (
-            <Text style={styles.timeSince}>{timeSinceBottle}</Text>
+        <View style={styles.rightActions}>
+          <Pressable onPress={handleTimePress} style={styles.timeContainer}>
+            <Text style={styles.time}>{formatTime(event.at)}</Text>
+            {event.type === 'bottle' && timeSinceBottle && (
+              <Text style={styles.timeSince}>{timeSinceBottle}</Text>
+            )}
+          </Pressable>
+
+          {onDelete && (
+            <Pressable
+              onPress={() => onDelete(event.id)}
+              style={({ pressed }) => [
+                styles.deleteButton,
+                pressed && { opacity: 0.5 }
+              ]}
+            >
+              <MaterialCommunityIcons
+                name="trash-can-outline"
+                size={22}
+                color={Colors.pastel.rose}
+              />
+            </Pressable>
           )}
-        </Pressable>
+        </View>
       </View>
 
       <Modal
@@ -302,6 +321,19 @@ const styles = StyleSheet.create({
     color: Colors.neutral.darkGray,
     marginTop: 2,
     opacity: 0.7,
+  },
+  rightActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginLeft: Spacing.md,
+  },
+  // Added deleteButton style so references to styles.deleteButton are valid
+  deleteButton: {
+    marginLeft: Spacing.sm,
+    padding: Spacing.xs,
+    borderRadius: BorderRadius.sm,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   modalOverlay: {
     flex: 1,

@@ -1,45 +1,66 @@
 import { useEffect } from "react";
 import { getSupabase } from "@/src/utils/supabase";
 import { useBabyStore } from "@/src/state/useBabyStore";
-import { Event } from "@/src/data/types";
 
 /**
- * Écoute en temps réel les modifications sur la table events,
- * pour le user actuellement connecté.
+ * ✅ Version automatique :
+ * détecte si la colonne user_id contient un email ou un UUID
+ * et s'abonne aux bons changements Realtime
  */
 export function useRealtimeEvents() {
-  const supabase = getSupabase()!;
+  const supabase = getSupabase();
   const { addEvent, updateEvent, removeEvent } = useBabyStore();
 
   useEffect(() => {
     let channel: ReturnType<typeof supabase.channel> | null = null;
-    let activeUserId: string | null = null;
 
-    async function init() {
-      const { data } = await supabase.auth.getUser();
-      activeUserId = data?.user?.id ?? null;
+    (async () => {
+      // --- 1️⃣ Récupère l'utilisateur connecté ---
+      const { data: u } = await supabase.auth.getUser();
+      const user = u?.user;
+      if (!user) {
+        console.log("⚠️ Aucun utilisateur connecté, realtime non activé.");
+        return;
+      }
 
-      if (!activeUserId) return;
+      // --- 2️⃣ Détermine automatiquement si user_id = UUID ou email ---
+      let filterValue: string | null = user.id; // on suppose UUID par défaut
+      try {
+        const { data } = await supabase
+          .from("events")
+          .select("user_id")
+          .limit(1);
 
+        const sample = data?.[0]?.user_id ?? "";
+        if (sample && sample.includes("@")) {
+          filterValue = user.email ?? null;
+        }
+      } catch (e) {
+        console.log("🔎 Impossible de détecter le type de user_id :", e);
+      }
+
+      // --- 3️⃣ Construction du canal Realtime ---
+      const filterObj =
+        filterValue !== null
+          ? { filter: `user_id=eq.${filterValue}` }
+          : {};
+
+      console.log("🧩 Abonnement Realtime avec filtre :", filterObj);
 
       channel = supabase
         .channel("events-sync")
         .on(
           "postgres_changes",
-          {
-            event: "*", // INSERT / UPDATE / DELETE
-            schema: "public",
-            table: "events",
-            filter: `createdBy=eq.${activeUserId}`,
-          },
+          { event: "*", schema: "public", table: "events", ...filterObj },
           (payload) => {
+            console.log("📡 Realtime reçu :", payload.eventType, payload);
 
             switch (payload.eventType) {
               case "INSERT":
-                addEvent(payload.new as Omit<Event, "id" | "createdBy">);
+                addEvent(payload.new);
                 break;
               case "UPDATE":
-                updateEvent(payload.new.id, payload.new as Event);
+                updateEvent(payload.new.id, payload.new);
                 break;
               case "DELETE":
                 removeEvent(payload.old.id);
@@ -48,14 +69,14 @@ export function useRealtimeEvents() {
           }
         )
         .subscribe((status) => {
+          console.log("🔄 Canal Realtime status:", status);
         });
-    }
-
-    init();
+    })();
 
     return () => {
       if (channel) {
         supabase.removeChannel(channel);
+        console.log("🧹 Canal Realtime fermé");
       }
     };
   }, []);

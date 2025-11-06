@@ -129,11 +129,49 @@ function getEventDetails(event: Event): string {
   }
 }
 
+function getEventTypeLabel(type: string): string {
+  switch (type) {
+    case 'bottle': return 'biberon';
+    case 'sleep': return 'sieste';
+    case 'med': return 'médicament';
+    case 'diaper': return 'couche';
+    case 'growth': return 'mesure de croissance';
+    default: return 'événement';
+  }
+}
+
+function getDeleteMessage(event: Event, babyName: string): string {
+  const eventTypeLabel = getEventTypeLabel(event.type);
+  const eventDetails = getEventDetails(event);
+  const eventTime = formatTime(event.at);
+  
+  switch (event.type) {
+    case 'bottle':
+      return `Supprimer le biberon de ${eventDetails} de ${babyName} à ${eventTime} ?`;
+    
+    case 'sleep':
+      return `Supprimer la sieste de ${eventDetails} de ${babyName} à ${eventTime} ?`;
+    
+    case 'med':
+      return `Supprimer le médicament "${eventDetails}" de ${babyName} à ${eventTime} ?`;
+    
+    case 'diaper':
+      return `Supprimer la couche ${eventDetails.toLowerCase()} de ${babyName} à ${eventTime} ?`;
+    
+    case 'growth':
+      return `Supprimer la mesure de croissance (${eventDetails}) de ${babyName} à ${eventTime} ?`;
+    
+    default:
+      return `Supprimer l'événement de ${babyName} à ${eventTime} ?`;
+  }
+}
+
 export function EventCard({ event, babyName, allEvents = [], onDelete }: EventCardProps) {
   const { updateEvent } = useBabyStore();
   const [isEditingTime, setIsEditingTime] = useState(false);
   const [timeInput, setTimeInput] = useState(formatTimeForInput(event.at));
   const [currentTime, setCurrentTime] = useState(Date.now());
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   
   // Rafraîchissement automatique du temps pour les biberons
   useEffect(() => {
@@ -198,6 +236,21 @@ export function EventCard({ event, babyName, allEvents = [], onDelete }: EventCa
     setTimeInput(formatTimeForInput(event.at));
   };
 
+  const handleDeletePress = () => {
+    setShowDeleteConfirm(true);
+  };
+
+  const handleConfirmDelete = () => {
+    if (onDelete) {
+      onDelete(event.id);
+    }
+    setShowDeleteConfirm(false);
+  };
+
+  const handleCancelDelete = () => {
+    setShowDeleteConfirm(false);
+  };
+
   return (
     <>
       <View style={styles.container}>
@@ -222,7 +275,7 @@ export function EventCard({ event, babyName, allEvents = [], onDelete }: EventCa
 
           {onDelete && (
             <Pressable
-              onPress={() => onDelete(event.id)}
+              onPress={handleDeletePress}
               style={({ pressed }) => [
                 styles.deleteButton,
                 pressed && { opacity: 0.5 }
@@ -261,6 +314,46 @@ export function EventCard({ event, babyName, allEvents = [], onDelete }: EventCa
               </Pressable>
               <Pressable onPress={handleSaveTime} style={[styles.modalButton, styles.saveButton]}>
                 <Text style={styles.saveButtonText}>Enregistrer</Text>
+              </Pressable>
+            </View>
+          </View>
+        </View>
+      </Modal>
+
+      <Modal
+        visible={showDeleteConfirm}
+        transparent
+        animationType="fade"
+        onRequestClose={handleCancelDelete}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <View style={styles.deleteIconContainer}>
+              <MaterialCommunityIcons
+                name="alert-circle-outline"
+                size={48}
+                color={Colors.semantic.error}
+              />
+            </View>
+            <Text style={styles.modalTitle}>Supprimer l'événement ?</Text>
+            <Text style={styles.deleteConfirmText}>
+              {getDeleteMessage(event, babyName)}
+            </Text>
+            <Text style={styles.deleteWarningText}>
+              Cette action est irréversible.
+            </Text>
+            <View style={styles.modalButtons}>
+              <Pressable 
+                onPress={handleCancelDelete} 
+                style={[styles.modalButton, styles.cancelButton]}
+              >
+                <Text style={styles.cancelButtonText}>Annuler</Text>
+              </Pressable>
+              <Pressable 
+                onPress={handleConfirmDelete} 
+                style={[styles.modalButton, styles.deleteConfirmButton]}
+              >
+                <Text style={styles.deleteConfirmButtonText}>Supprimer</Text>
               </Pressable>
             </View>
           </View>
@@ -387,6 +480,32 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.pastel.mintActive,
   },
   saveButtonText: {
+    color: Colors.neutral.white,
+    fontWeight: '600',
+  },
+  deleteIconContainer: {
+    alignItems: 'center',
+    marginBottom: Spacing.md,
+  },
+  deleteConfirmText: {
+    fontSize: FontSize.md,
+    color: Colors.neutral.charcoal,
+    textAlign: 'center',
+    marginBottom: Spacing.sm,
+    lineHeight: 22,
+    fontWeight: '600',
+  },
+  deleteWarningText: {
+    fontSize: FontSize.sm,
+    color: Colors.neutral.darkGray,
+    textAlign: 'center',
+    marginBottom: Spacing.lg,
+    fontStyle: 'italic',
+  },
+  deleteConfirmButton: {
+    backgroundColor: Colors.semantic.error,
+  },
+  deleteConfirmButtonText: {
     color: Colors.neutral.white,
     fontWeight: '600',
   },

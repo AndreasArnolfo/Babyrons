@@ -10,8 +10,10 @@ import { Spacing, BorderRadius, FontSize } from "../../src/theme/spacing";
 import { getSupabase } from '@/src/utils/supabase';
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Alert } from "react-native";
+import { useRealtimeEvents } from "@/src/hooks/useRealtimeEvents";
 
 export default function Index() {
+  useRealtimeEvents();
   const router = useRouter();
   const { babies, events } = useBabyStore();
   const [selectedBabyId, setSelectedBabyId] = useState<string | null>(null);
@@ -39,7 +41,6 @@ export default function Index() {
       return;
     }
 
-    console.log("🗑 Tentative suppression event :", eventId);
 
     const { data, error } = await supabase
       .from("events")        // ✅ une seule table
@@ -51,34 +52,12 @@ export default function Index() {
       console.error("❌ Erreur Supabase :", error.message);
       Alert.alert("Erreur", "Impossible de supprimer l'événement : " + error.message);
     } else {
-      console.log("✅ Événement supprimé :", data);
       useBabyStore.getState().removeEvent(eventId);
     }
   };
 
   const [displayName, setDisplayName] = useState<string>("");
 
-  useEffect(() => {
-    (async () => {
-      const supabase = getSupabase();
-      if (!supabase) {
-        console.log('Supabase non configuré (variables manquantes)');
-        return;
-      }
-      // try to fetch authenticated user from Supabase and set display name
-      try {
-        const { data: userData, error: userError } = await supabase.auth.getUser();
-        const user = userData?.user;
-        const email = user?.email || "";
-        setDisplayName(email ? email.split("@")[0] : "");
-
-        const { data, error } = await supabase.from('test').select('*').limit(1);
-        console.log('Supabase OK?', !!data && !error && !userError, (error || userError)?.message);
-      } catch (err) {
-        console.log('Erreur Supabase:', err);
-      }
-    })();
-  }, []);
 const logo = require("../../assets/images/logo-babyrons.png");
 const insets = useSafeAreaInsets();
   return (

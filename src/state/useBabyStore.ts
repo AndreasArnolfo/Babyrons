@@ -19,6 +19,7 @@ interface BabyStore {
   loadFromSupabase: () => Promise<void>;
   
   addBaby: (babyData: { name: string; gender?: 'male' | 'female' | null; birthDate?: number | null; photo?: string | null }) => void;
+  addBabyFromSupabase: (baby: ExtendedBaby) => void; // Pour ajouter un bébé venant de Supabase (sans upsert)
   removeBaby: (id: string) => void;
   updateBaby: (id: string, updates: Partial<ExtendedBaby>) => void;
   
@@ -113,10 +114,22 @@ export const useBabyStore = create<BabyStore>((set, get) => {
   // ✅ MODIFIÉ : prend maintenant un objet complet pour le bébé
   addBaby: (babyData) => {
     const babies = get().babies;
+    
+    // Générer un ID unique (ajouter un random pour éviter les collisions si créés dans la même ms)
+    const timestamp = Date.now();
+    const random = Math.random().toString(36).substring(2, 9);
+    const newId = `baby-${timestamp}-${random}`;
+    
+    // Vérifier que l'ID n'existe pas déjà (sécurité supplémentaire)
+    if (babies.some(b => b.id === newId)) {
+      console.warn('ID de bébé déjà existant, génération d\'un nouvel ID');
+      return get().addBaby(babyData); // Réessayer avec un nouvel ID
+    }
+    
     const colorIndex = babies.length % babyColors.length;
 
     const newBaby: ExtendedBaby = {
-      id: `baby-${Date.now()}`,
+      id: newId,
       name: babyData.name,
       gender: babyData.gender || null,
       birthDate: babyData.birthDate || null,
@@ -127,13 +140,24 @@ export const useBabyStore = create<BabyStore>((set, get) => {
           : babyData.gender === 'female'
           ? '#E8B7D4'
           : babyColors[colorIndex],
-      createdAt: Date.now(),
+      createdAt: timestamp,
     };
 
     set({ babies: [...babies, newBaby] });
     get().saveToStorage();
     const userId = get().userId;
     if (userId) { void upsertBaby(userId, newBaby); }
+  },
+
+  // Ajouter un bébé venant de Supabase (sans déclencher d'upsert pour éviter les boucles)
+  addBabyFromSupabase: (baby: ExtendedBaby) => {
+    const babies = get().babies;
+    // Vérifier qu'il n'existe pas déjà
+    if (babies.some(b => b.id === baby.id)) {
+      return; // Déjà présent, ne rien faire
+    }
+    set({ babies: [...babies, baby] });
+    get().saveToStorage();
   },
   
   removeBaby: (id: string) => {

@@ -4,7 +4,7 @@ import { useBabyStore } from "@/src/state/useBabyStore";
 
 export function useRealtimeBabies() {
   const supabase = getSupabase();
-  const { addBaby, updateBaby, removeBaby } = useBabyStore();
+  const { addBabyFromSupabase, updateBaby, removeBaby } = useBabyStore();
 
   useEffect(() => {
     console.log("👶 useRealtimeBabies monté");
@@ -20,18 +20,36 @@ export function useRealtimeBabies() {
 
           switch (payload.eventType) {
             case "INSERT":
-              // ✅ éviter les doublons
+              // ✅ éviter les doublons et convertir les données Supabase au format local
               if (
                 !useBabyStore
                   .getState()
                   .babies.some((b) => b.id === payload.new.id)
               ) {
-                addBaby(payload.new);
+                // Convertir les données Supabase au format ExtendedBaby
+                const baby: ExtendedBaby = {
+                  id: payload.new.id,
+                  name: payload.new.name,
+                  color: payload.new.color || null,
+                  photo: payload.new.photo ?? null,
+                  gender: payload.new.gender ?? null,
+                  birthDate: payload.new.birth_date ? Number(payload.new.birth_date) : null,
+                  createdAt: Number(payload.new.created_at) || Date.now(),
+                };
+                addBabyFromSupabase(baby);
               }
               break;
 
             case "UPDATE":
-              updateBaby(payload.new.id, payload.new);
+              // Convertir les données Supabase au format local
+              const updates: Partial<ExtendedBaby> = {
+                name: payload.new.name,
+                color: payload.new.color || null,
+                photo: payload.new.photo ?? null,
+                gender: payload.new.gender ?? null,
+                birthDate: payload.new.birth_date ? Number(payload.new.birth_date) : null,
+              };
+              updateBaby(payload.new.id, updates);
               break;
 
             case "DELETE":

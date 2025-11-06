@@ -86,6 +86,16 @@ export default function ManageBabyModal() {
       return;
     }
 
+    const { babies } = useBabyStore.getState(); 
+    const MAX_BABIES = 10; 
+
+    if (!editingBabyId && babies.length >= MAX_BABIES) {
+      Alert.alert(
+        "Limite atteinte",
+        `Vous avez atteint le nombre maximum de ${MAX_BABIES} bébés autorisés.`
+      );
+      return;
+    }
     setIsUploading(true);
 
     try {

@@ -11,6 +11,7 @@ import { getSupabase } from '@/src/utils/supabase';
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Alert } from "react-native";
 import { useRealtimeEvents } from "@/src/hooks/useRealtimeEvents";
+import { useRealtimeBabies } from "@/src/hooks/useRealtimeBabies";
 
 function formatDisplayNameFromEmail(email: string): string {
   if (!email) return "";
@@ -38,6 +39,8 @@ function formatDisplayNameFromEmail(email: string): string {
 
 export default function Index() {
   useRealtimeEvents();
+  useRealtimeBabies();
+  
   const router = useRouter();
   const { babies, events } = useBabyStore();
   const [selectedBabyId, setSelectedBabyId] = useState<string | null>(null);
@@ -101,7 +104,7 @@ export default function Index() {
       }
     })();
   }, []);
-  
+
 const logo = require("../../assets/images/logo-babyrons.png");
 const insets = useSafeAreaInsets();
   return (

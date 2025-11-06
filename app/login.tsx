@@ -10,6 +10,7 @@ export default function LoginScreen() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
+  const [resetLoading, setResetLoading] = useState(false);
 
   const handleLogin = async () => {
     const supabase = getSupabase();
@@ -48,6 +49,32 @@ export default function LoginScreen() {
     Alert.alert('Vérifiez votre email', 'Un lien de confirmation vous a été envoyé.');
   };
 
+  const handleForgotPassword = async () => {
+    const supabase = getSupabase();
+    if (!supabase) {
+      Alert.alert('Configuration manquante', 'Supabase n\'est pas configuré.');
+      return;
+    }
+    if (!email.trim()) {
+      Alert.alert('Email requis', 'Veuillez entrer votre adresse email pour réinitialiser votre mot de passe.');
+      return;
+    }
+    setResetLoading(true);
+    const { error } = await supabase.auth.resetPasswordForEmail(email.trim(), {
+      redirectTo: 'babyrons:///reset-password', // URL de redirection après clic sur le lien (3 slashes pour Expo Router)
+    });
+    setResetLoading(false);
+    if (error) {
+      Alert.alert('Erreur', error.message);
+      return;
+    }
+    Alert.alert(
+      'Email envoyé',
+      'Un lien de réinitialisation de mot de passe a été envoyé à votre adresse email. Vérifiez votre boîte de réception.',
+      [{ text: 'OK' }]
+    );
+  };
+
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
       <View style={styles.header}>
@@ -78,6 +105,18 @@ export default function LoginScreen() {
           placeholder="••••••••"
           placeholderTextColor={Colors.neutral.darkGray}
         />
+
+        <Pressable 
+          style={styles.forgotPasswordButton} 
+          onPress={handleForgotPassword} 
+          disabled={resetLoading || loading}
+        >
+          {resetLoading ? (
+            <ActivityIndicator size="small" color={Colors.pastel.mintActive} />
+          ) : (
+            <Text style={styles.forgotPasswordText}>Mot de passe oublié ?</Text>
+          )}
+        </Pressable>
 
         <Pressable style={[styles.button, loading && styles.buttonDisabled]} onPress={handleLogin} disabled={loading}>
           {loading ? <ActivityIndicator color={Colors.neutral.white} /> : <Text style={styles.buttonText}>Se connecter</Text>}
@@ -118,6 +157,17 @@ const styles = StyleSheet.create({
   },
   buttonDisabled: { opacity: 0.6 },
   buttonText: { color: Colors.neutral.white, fontSize: FontSize.lg, fontWeight: '700' },
+  forgotPasswordButton: { 
+    alignItems: 'flex-end', 
+    marginTop: Spacing.xs,
+    marginBottom: Spacing.sm,
+  },
+  forgotPasswordText: { 
+    color: Colors.pastel.mintActive, 
+    fontSize: FontSize.sm, 
+    fontWeight: '600',
+    textDecorationLine: 'underline',
+  },
   secondaryButton: { alignItems: 'center', marginTop: Spacing.md },
   secondaryButtonText: { color: Colors.pastel.mintActive, fontSize: FontSize.md, fontWeight: '700' },
 });

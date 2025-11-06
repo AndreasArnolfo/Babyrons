@@ -3,6 +3,7 @@ import { Stack, useRouter, useSegments } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { useEffect } from 'react';
 import { View, ActivityIndicator } from 'react-native';
+import * as Linking from 'expo-linking';
 import 'react-native-reanimated';
 import { useSupabaseAuth } from '../src/hooks/useSupabaseAuth';
 import { Colors } from '../src/theme/colors';
@@ -29,7 +30,7 @@ export default function RootLayout() {
       router.replace('/(tabs)');
       return;
     }
-    // Laisser passer les modals et autres routes
+    // Laisser passer reset-password, modals et autres routes publiques
   }, [session, loading, segments]);
 
   // Charger les données utilisateur depuis Supabase à la connexion
@@ -44,6 +45,37 @@ export default function RootLayout() {
     }
   }, [session]);
 
+  // Gérer les deep links pour la réinitialisation de mot de passe
+  useEffect(() => {
+    const handleDeepLink = async (event: { url: string }) => {
+      const { url } = event;
+      
+      // Vérifier si c'est un lien de réinitialisation
+      if (url.includes('reset-password') || url.includes('type=recovery')) {
+        // Attendre un peu pour que Supabase traite les tokens
+        setTimeout(() => {
+          router.replace('/reset-password');
+        }, 500);
+      }
+    };
+
+    // Écouter les deep links initiaux
+    Linking.getInitialURL().then((url) => {
+      if (url && (url.includes('reset-password') || url.includes('type=recovery'))) {
+        setTimeout(() => {
+          router.replace('/reset-password');
+        }, 500);
+      }
+    });
+
+    // Écouter les nouveaux deep links
+    const subscription = Linking.addEventListener('url', handleDeepLink);
+
+    return () => {
+      subscription.remove();
+    };
+  }, [router]);
+
   if (loading) {
     return (
       <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: Colors.neutral.lightGray }}>
@@ -57,6 +89,7 @@ export default function RootLayout() {
       <Stack>
         <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
         <Stack.Screen name="login" options={{ headerShown: false }} />
+        <Stack.Screen name="reset-password" options={{ headerShown: false }} />
         <Stack.Screen 
           name="modals/add-event" 
           options={{ 

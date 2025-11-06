@@ -9,7 +9,7 @@ import { useBabyStore } from "@/src/state/useBabyStore";
  */
 export function useRealtimeEvents() {
   const supabase = getSupabase();
-  const { addEvent, updateEvent, removeEvent } = useBabyStore();
+  const { addEventFromSupabase, updateEvent, removeEvent } = useBabyStore();
 
   useEffect(() => {
     let channel: ReturnType<typeof supabase.channel> | null = null;
@@ -61,11 +61,58 @@ export function useRealtimeEvents() {
                     .getState()
                     .events.some((e) => e.id === payload.new.id);
                 if (!exists) {
-                    addEvent(payload.new);
+                    // Convertir les données Supabase au format Event local
+                    const babyId = payload.new.baby_id;
+                    console.log("🔍 Conversion événement realtime - baby_id:", babyId, "type:", typeof babyId);
+                    console.log("🔍 Bébés disponibles:", useBabyStore.getState().babies.map(b => ({ id: b.id, name: b.name })));
+                    
+                    const eventData: Omit<Event, 'id' | 'createdBy'> = {
+                      babyId: babyId,
+                      type: payload.new.type,
+                      at: Number(payload.new.at),
+                      // Champs optionnels selon le type
+                      ml: payload.new.ml ?? undefined,
+                      kind: payload.new.kind ?? undefined,
+                      startAt: payload.new.start_at ?? undefined,
+                      endAt: payload.new.end_at ?? undefined,
+                      duration: payload.new.duration ?? undefined,
+                      name: payload.new.name ?? undefined,
+                      dose: payload.new.dose ?? undefined,
+                      note: payload.new.note ?? undefined,
+                      weightKg: payload.new.weight_kg ?? undefined,
+                      heightCm: payload.new.height_cm ?? undefined,
+                      headCircumferenceCm: payload.new.head_circumference_cm ?? undefined,
+                    };
+                    // Créer l'événement avec l'ID de Supabase
+                    const newEvent = {
+                      ...eventData,
+                      id: payload.new.id,
+                      createdBy: 'remote',
+                    } as Event;
+                    console.log("✅ Événement converti:", { id: newEvent.id, babyId: newEvent.babyId, type: newEvent.type });
+                    // Ajouter l'événement au store (sans déclencher d'upsert)
+                    addEventFromSupabase(newEvent);
                 }
                 break;
               case "UPDATE":
-                updateEvent(payload.new.id, payload.new);
+                // Convertir les données Supabase au format local
+                const updates: Partial<Event> = {
+                  babyId: payload.new.baby_id,
+                  type: payload.new.type,
+                  at: Number(payload.new.at),
+                  ml: payload.new.ml ?? undefined,
+                  kind: payload.new.kind ?? undefined,
+                  startAt: payload.new.start_at ?? undefined,
+                  endAt: payload.new.end_at ?? undefined,
+                  duration: payload.new.duration ?? undefined,
+                  name: payload.new.name ?? undefined,
+                  dose: payload.new.dose ?? undefined,
+                  note: payload.new.note ?? undefined,
+                  weightKg: payload.new.weight_kg ?? undefined,
+                  heightCm: payload.new.height_cm ?? undefined,
+                  headCircumferenceCm: payload.new.head_circumference_cm ?? undefined,
+                };
+                updateEvent(payload.new.id, updates);
                 break;
               case "DELETE":
                 removeEvent(payload.old.id);

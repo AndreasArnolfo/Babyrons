@@ -24,6 +24,7 @@ interface BabyStore {
   updateBaby: (id: string, updates: Partial<ExtendedBaby>) => void;
   
   addEvent: (event: Omit<Event, 'id' | 'createdBy'>) => void;
+  addEventFromSupabase: (event: Event) => void; // Pour ajouter un événement venant de Supabase (sans upsert)
   removeEvent: (id: string) => void;
   updateEvent: (id: string, updates: Partial<Event>) => void;
   getEventsByBaby: (babyId: string) => Event[];
@@ -192,6 +193,17 @@ export const useBabyStore = create<BabyStore>((set, get) => {
     get().saveToStorage();
     const userId = get().userId;
     if (userId) { void upsertEvent(userId, newEvent); }
+  },
+
+  // Ajouter un événement venant de Supabase (sans déclencher d'upsert pour éviter les boucles)
+  addEventFromSupabase: (event: Event) => {
+    const events = get().events;
+    // Vérifier qu'il n'existe pas déjà
+    if (events.some(e => e.id === event.id)) {
+      return; // Déjà présent, ne rien faire
+    }
+    set(state => ({ events: [...state.events, event] }));
+    get().saveToStorage();
   },
   
   removeEvent: (id: string) => {

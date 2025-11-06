@@ -12,6 +12,30 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Alert } from "react-native";
 import { useRealtimeEvents } from "@/src/hooks/useRealtimeEvents";
 
+function formatDisplayNameFromEmail(email: string): string {
+  if (!email) return "";
+
+  // Partie avant le @
+  const namePart = email.split("@")[0];
+
+  // Supprimer les chiffres, remplacer . par espace, et découper en mots
+  const words = namePart
+    .replace(/[0-9]/g, "")
+    .replace(/\./g, " ")
+    .split(" ")
+    .filter((w) => w.trim() !== "");
+
+  // Mettre une majuscule au début de chaque mot
+  const formatted = words
+    .map(
+      (word) =>
+        word.charAt(0).toUpperCase() + word.slice(1).toLowerCase()
+    )
+    .join(" ");
+
+  return formatted;
+}
+
 export default function Index() {
   useRealtimeEvents();
   const router = useRouter();
@@ -57,7 +81,27 @@ export default function Index() {
   };
 
   const [displayName, setDisplayName] = useState<string>("");
+  useEffect(() => {
+    (async () => {
+      const supabase = getSupabase();
+      if (!supabase) return;
 
+      try {
+        const { data: userData } = await supabase.auth.getUser();
+        const email = userData?.user?.email || "";
+
+        // Utilise notre fonction propre
+        const formattedName = formatDisplayNameFromEmail(email);
+
+        // Si c’est vide (ex: email bizarre), fallback
+        setDisplayName(formattedName || "Utilisateur Babyrons");
+      } catch (err) {
+        console.error("Erreur Supabase:", err);
+        setDisplayName("Utilisateur Babyrons");
+      }
+    })();
+  }, []);
+  
 const logo = require("../../assets/images/logo-babyrons.png");
 const insets = useSafeAreaInsets();
   return (

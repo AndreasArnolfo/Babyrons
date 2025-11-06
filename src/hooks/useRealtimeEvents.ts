@@ -57,7 +57,12 @@ export function useRealtimeEvents() {
 
             switch (payload.eventType) {
               case "INSERT":
-                addEvent(payload.new);
+                const exists = useBabyStore
+                    .getState()
+                    .events.some((e) => e.id === payload.new.id);
+                if (!exists) {
+                    addEvent(payload.new);
+                }
                 break;
               case "UPDATE":
                 updateEvent(payload.new.id, payload.new);

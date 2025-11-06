@@ -7,7 +7,7 @@ import { Colors } from "../../src/theme/colors";
 import { Spacing, BorderRadius, FontSize } from "../../src/theme/spacing";
 
 export default function History() {
-  const { babies, events } = useBabyStore();
+  const { babies, events, removeEvent } = useBabyStore();
 
   const sortedEvents = [...events].sort((a, b) => b.at - a.at);
 
@@ -38,6 +38,7 @@ export default function History() {
                 event={event}
                 babyName={baby?.name || "Inconnu"}
                 allEvents={events}
+                onDelete={removeEvent}
               />
             );
           })

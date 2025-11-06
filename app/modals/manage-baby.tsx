@@ -9,13 +9,16 @@ import {
   Alert,
   Image,
   Platform,
+  ActivityIndicator,
 } from "react-native";
 import * as ImagePicker from "expo-image-picker";
 import DateTimePicker from "@react-native-community/datetimepicker";
 import { useRouter } from "expo-router";
 import { useBabyStore } from "../../src/state/useBabyStore";
+import { useSupabaseAuth } from "../../src/hooks/useSupabaseAuth";
 import { Colors } from "../../src/theme/colors";
 import { Spacing, BorderRadius, FontSize } from "../../src/theme/spacing";
+import { uploadBabyPhoto } from "../../src/lib/photoUpload";
 
 export default function ManageBabyModal() {
   const router = useRouter();
@@ -35,13 +38,16 @@ export default function ManageBabyModal() {
     removeBaby: (id: string) => void;
     updateBaby: (id: string, updates: Partial<Baby>) => void;
   };
+  const { session } = useSupabaseAuth();
 
   const [newBabyName, setNewBabyName] = useState("");
   const [selectedSex, setSelectedSex] = useState<"male" | "female" | null>(null);
   const [birthDate, setBirthDate] = useState<Date | null>(null);
   const [photo, setPhoto] = useState<string | null>(null);
+  const [photoLocalUri, setPhotoLocalUri] = useState<string | null>(null); // URI locale avant upload
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [editingBabyId, setEditingBabyId] = useState<string | null>(null);
+  const [isUploading, setIsUploading] = useState(false);
 
   const defaultImageM = require("../../assets/images/baby_placeholder_m.png");
   const defaultImageF = require("../../assets/images/baby_placeholder_f.png");
@@ -62,43 +68,89 @@ export default function ManageBabyModal() {
     });
 
     if (!result.canceled) {
+      setPhotoLocalUri(result.assets[0].uri);
+      // Afficher la photo localement pendant l'upload
       setPhoto(result.assets[0].uri);
     }
   };
 
   // ➕ Ajout ou modification
-  const handleAddOrEditBaby = () => {
+  const handleAddOrEditBaby = async () => {
     if (!newBabyName.trim()) {
       Alert.alert("Erreur", "Veuillez entrer un prénom.");
       return;
     }
 
-    if (editingBabyId) {
-      // 🔄 Mode édition
-      updateBaby(editingBabyId, {
-        name: newBabyName.trim(),
-        gender: selectedSex,
-        birthDate: birthDate ? birthDate.getTime() : null,
-        photo,
-      });
-      Alert.alert("Succès", "Bébé modifié avec succès !");
-      setEditingBabyId(null);
-    } else {
-      // ➕ Mode ajout
-      addBaby({
-        name: newBabyName.trim(),
-        gender: selectedSex,
-        birthDate: birthDate ? birthDate.getTime() : null,
-        photo,
-      });
-      Alert.alert("Succès", "Bébé ajouté avec succès !");
+    if (!session?.user?.id) {
+      Alert.alert("Erreur", "Vous devez être connecté pour ajouter un bébé.");
+      return;
     }
 
-    // Réinitialise les champs
-    setNewBabyName("");
-    setSelectedSex(null);
-    setBirthDate(null);
-    setPhoto(null);
+    setIsUploading(true);
+
+    try {
+      let photoUrl: string | null = photo;
+
+      // Si une nouvelle photo locale a été sélectionnée, l'uploader
+      if (photoLocalUri && photoLocalUri.startsWith('file://')) {
+        const babyId = editingBabyId || `baby-${Date.now()}`;
+        const uploadedUrl = await uploadBabyPhoto(
+          photoLocalUri,
+          session.user.id,
+          babyId
+        );
+
+        if (uploadedUrl) {
+          photoUrl = uploadedUrl;
+        } else {
+          Alert.alert("Attention", "La photo n'a pas pu être uploadée, mais le bébé sera créé sans photo.");
+        }
+      }
+
+      if (editingBabyId) {
+        // 🔄 Mode édition
+        // Récupérer l'ancienne photo pour la supprimer si nécessaire
+        const oldBaby = babies.find(b => b.id === editingBabyId);
+        const oldPhotoUrl = oldBaby?.photo;
+
+        updateBaby(editingBabyId, {
+          name: newBabyName.trim(),
+          gender: selectedSex,
+          birthDate: birthDate ? birthDate.getTime() : null,
+          photo: photoUrl,
+        });
+
+        // Supprimer l'ancienne photo si elle existe et est différente de la nouvelle
+        if (oldPhotoUrl && oldPhotoUrl !== photoUrl && oldPhotoUrl.startsWith('http')) {
+          const { deleteBabyPhoto } = require('../../src/lib/photoUpload');
+          await deleteBabyPhoto(oldPhotoUrl);
+        }
+
+        Alert.alert("Succès", "Bébé modifié avec succès !");
+        setEditingBabyId(null);
+      } else {
+        // ➕ Mode ajout
+        addBaby({
+          name: newBabyName.trim(),
+          gender: selectedSex,
+          birthDate: birthDate ? birthDate.getTime() : null,
+          photo: photoUrl,
+        });
+        Alert.alert("Succès", "Bébé ajouté avec succès !");
+      }
+
+      // Réinitialise les champs
+      setNewBabyName("");
+      setSelectedSex(null);
+      setBirthDate(null);
+      setPhoto(null);
+      setPhotoLocalUri(null);
+    } catch (error) {
+      console.error('Erreur lors de la sauvegarde:', error);
+      Alert.alert("Erreur", "Une erreur est survenue lors de la sauvegarde.");
+    } finally {
+      setIsUploading(false);
+    }
   };
 
   // ✏️ Mode édition
@@ -108,6 +160,7 @@ export default function ManageBabyModal() {
     setSelectedSex(baby.gender);
     setBirthDate(baby.birthDate ? new Date(baby.birthDate) : null);
     setPhoto(baby.photo || null);
+    setPhotoLocalUri(null); // Réinitialiser l'URI locale
     Alert.alert("Mode édition", `Vous modifiez ${baby.name}`);
   };
 
@@ -223,10 +276,18 @@ export default function ManageBabyModal() {
         )}
 
         {/* Bouton principal */}
-        <Pressable onPress={handleAddOrEditBaby} style={styles.addButton}>
-          <Text style={styles.addButtonText}>
-            {editingBabyId ? "Modifier ✏️" : "Ajouter 👶"}
-          </Text>
+        <Pressable 
+          onPress={handleAddOrEditBaby} 
+          style={[styles.addButton, isUploading && styles.addButtonDisabled]}
+          disabled={isUploading}
+        >
+          {isUploading ? (
+            <ActivityIndicator color={Colors.neutral.white} />
+          ) : (
+            <Text style={styles.addButtonText}>
+              {editingBabyId ? "Modifier ✏️" : "Ajouter 👶"}
+            </Text>
+          )}
         </Pressable>
       </View>
 
@@ -388,6 +449,9 @@ const styles = StyleSheet.create({
     fontSize: FontSize.lg,
     color: Colors.neutral.white,
     fontWeight: "bold",
+  },
+  addButtonDisabled: {
+    opacity: 0.6,
   },
   babyCard: {
     flexDirection: "row",

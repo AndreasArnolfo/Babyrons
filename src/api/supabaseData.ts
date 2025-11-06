@@ -29,12 +29,31 @@ export async function fetchBabies(userId: string): Promise<ExtendedBaby[]> {
 export async function upsertBaby(userId: string, baby: ExtendedBaby): Promise<void> {
   const supabase = getSupabase();
   if (!supabase) return;
+  
+  // Migrer la photo locale vers Storage si nécessaire
+  let photoUrl = baby.photo;
+  if (photoUrl && photoUrl.startsWith('file://')) {
+    const { migrateLocalPhotoToStorage } = await import('../lib/photoUpload');
+    const migratedUrl = await migrateLocalPhotoToStorage(
+      photoUrl,
+      userId,
+      baby.id
+    );
+    if (migratedUrl) {
+      photoUrl = migratedUrl;
+    } else {
+      // Si la migration échoue, mettre null (photo perdue)
+      console.warn(`Impossible de migrer la photo locale pour ${baby.name}`);
+      photoUrl = null;
+    }
+  }
+  
   const { error } = await supabase.from('babies').upsert({
     id: baby.id,
     user_id: userId,
     name: baby.name,
     color: baby.color,
-    photo: baby.photo ?? null,
+    photo: photoUrl ?? null,
     gender: baby.gender ?? null,
     birth_date: baby.birthDate ?? null,
     created_at: baby.createdAt,
@@ -45,11 +64,28 @@ export async function upsertBaby(userId: string, baby: ExtendedBaby): Promise<vo
 export async function deleteBabyAndEvents(userId: string, babyId: string): Promise<void> {
   const supabase = getSupabase();
   if (!supabase) return;
+  
+  // Récupérer le bébé pour obtenir l'URL de la photo avant suppression
+  const { data: babyData } = await supabase
+    .from('babies')
+    .select('photo')
+    .eq('user_id', userId)
+    .eq('id', babyId)
+    .single();
+  
   // Delete events first
   const delEvents = await supabase.from('events').delete().match({ user_id: userId, baby_id: babyId });
   if (delEvents.error) console.warn('delete events error', delEvents.error.message);
+  
+  // Delete baby
   const delBaby = await supabase.from('babies').delete().match({ user_id: userId, id: babyId });
   if (delBaby.error) console.warn('delete baby error', delBaby.error.message);
+  
+  // Delete photo from storage if exists
+  if (babyData?.photo) {
+    const { deleteBabyPhoto } = await import('../lib/photoUpload');
+    await deleteBabyPhoto(babyData.photo);
+  }
 }
 
 // Events

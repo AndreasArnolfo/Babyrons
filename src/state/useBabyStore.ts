@@ -64,14 +64,42 @@ export const useBabyStore = create<BabyStore>((set, get) => {
       fetchEvents(userId),
       fetchSettings(userId),
     ]);
-    const extendedBabies: ExtendedBaby[] = babies.map(baby => ({
-      ...baby,
-      photo: baby.photo === undefined ? null : baby.photo,
-    }));
-    set({ babies: extendedBabies, events });
+    
+    // Migrer les photos locales vers Supabase Storage
+    const { migrateLocalPhotoToStorage } = await import('../lib/photoUpload');
+    const migratedBabies = await Promise.all(
+      babies.map(async (baby) => {
+        // Si la photo est une URL locale, la migrer vers Storage
+        if (baby.photo && baby.photo.startsWith('file://')) {
+          const newPhotoUrl = await migrateLocalPhotoToStorage(
+            baby.photo,
+            userId,
+            baby.id
+          );
+          if (newPhotoUrl) {
+            // Mettre à jour le bébé avec la nouvelle URL
+            const updatedBaby = { ...baby, photo: newPhotoUrl };
+            await upsertBaby(userId, updatedBaby);
+            return updatedBaby;
+          } else {
+            // Si la migration échoue, garder null (photo perdue)
+            console.warn(`Impossible de migrer la photo pour ${baby.name}`);
+            const updatedBaby = { ...baby, photo: null };
+            await upsertBaby(userId, updatedBaby);
+            return updatedBaby;
+          }
+        }
+        return {
+          ...baby,
+          photo: baby.photo === undefined ? null : baby.photo,
+        };
+      })
+    );
+    
+    set({ babies: migratedBabies, events });
     const finalSettings = settings || get().settings;
     set({ 
-      babies, 
+      babies: migratedBabies, 
       events,
       settings: finalSettings,
     });

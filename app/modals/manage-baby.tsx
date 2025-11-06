@@ -140,13 +140,20 @@ export default function ManageBabyModal() {
         setEditingBabyId(null);
       } else {
         // ➕ Mode ajout
-        addBaby({
+        const { error } = await supabase.from("babies").insert({
+          user_id: session.user.id,
           name: newBabyName.trim(),
           gender: selectedSex,
-          birthDate: birthDate ? birthDate.getTime() : null,
+          birth_date: birthDate ? birthDate.getTime() : null,
           photo: photoUrl,
         });
-        Alert.alert("Succès", "Bébé ajouté avec succès !");
+
+        if (error) {
+          console.error("Erreur Supabase:", error);
+          Alert.alert("Erreur", "Impossible d'ajouter le bébé : " + error.message);
+        } else {
+          Alert.alert("Succès", "Bébé ajouté avec succès !");
+        }
       }
 
       // Réinitialise les champs

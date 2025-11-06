@@ -172,6 +172,11 @@ export function EventCard({ event, babyName, allEvents = [], onDelete }: EventCa
   const [timeInput, setTimeInput] = useState(formatTimeForInput(event.at));
   const [currentTime, setCurrentTime] = useState(Date.now());
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [showEndSleepModal, setShowEndSleepModal] = useState(false);
+  const [endTimeInput, setEndTimeInput] = useState('');
+  
+  // Vérifier si c'est une sieste en cours
+  const isOngoingSleep = event.type === 'sleep' && !(event as SleepEvent).endAt;
   
   // Rafraîchissement automatique du temps pour les biberons
   useEffect(() => {
@@ -251,6 +256,59 @@ export function EventCard({ event, babyName, allEvents = [], onDelete }: EventCa
     setShowDeleteConfirm(false);
   };
 
+  const handleEndSleepPress = () => {
+    setEndTimeInput('');
+    setShowEndSleepModal(true);
+  };
+
+  const handleEndTimeInputChange = (text: string) => {
+    // Nettoyer le texte (garder seulement les chiffres et les deux-points)
+    let cleaned = text.replace(/[^\d:]/g, '');
+    
+    // Limiter à 5 caractères max (HH:MM)
+    if (cleaned.length > 5) {
+      cleaned = cleaned.slice(0, 5);
+    }
+    
+    // Ajouter automatiquement les deux-points après 2 chiffres
+    if (cleaned.length === 2 && !cleaned.includes(':')) {
+      cleaned = cleaned + ':';
+    }
+    
+    setEndTimeInput(cleaned);
+  };
+
+  const handleSaveEndSleep = () => {
+    const sleepEvent = event as SleepEvent;
+    const startTime = sleepEvent.startAt || event.at;
+    const endTime = endTimeInput ? parseTimeInput(endTimeInput, Date.now()) : Date.now();
+    
+    // Vérifier que l'heure de fin est après l'heure de début
+    if (endTime <= startTime) {
+      // Utiliser l'heure actuelle si l'heure saisie est invalide
+      const correctedEndTime = Date.now();
+      const duration = correctedEndTime - startTime;
+      updateEvent(event.id, {
+        endAt: correctedEndTime,
+        duration,
+      });
+    } else {
+      const duration = endTime - startTime;
+      updateEvent(event.id, {
+        endAt: endTime,
+        duration,
+      });
+    }
+    
+    setShowEndSleepModal(false);
+    setEndTimeInput('');
+  };
+
+  const handleCancelEndSleep = () => {
+    setShowEndSleepModal(false);
+    setEndTimeInput('');
+  };
+
   return (
     <>
       <View style={styles.container}>
@@ -264,6 +322,14 @@ export function EventCard({ event, babyName, allEvents = [], onDelete }: EventCa
         <View style={styles.content}>
           <Text style={styles.babyName}>{babyName}</Text>
           <Text style={styles.details}>{getEventDetails(event)}</Text>
+          {isOngoingSleep && (
+            <Pressable 
+              onPress={handleEndSleepPress}
+              style={styles.endSleepButton}
+            >
+              <Text style={styles.endSleepButtonText}>Terminer la sieste</Text>
+            </Pressable>
+          )}
         </View>
         <View style={styles.rightActions}>
           <Pressable onPress={handleTimePress} style={styles.timeContainer}>
@@ -354,6 +420,49 @@ export function EventCard({ event, babyName, allEvents = [], onDelete }: EventCa
                 style={[styles.modalButton, styles.deleteConfirmButton]}
               >
                 <Text style={styles.deleteConfirmButtonText}>Supprimer</Text>
+              </Pressable>
+            </View>
+          </View>
+        </View>
+      </Modal>
+
+      <Modal
+        visible={showEndSleepModal}
+        transparent
+        animationType="fade"
+        onRequestClose={handleCancelEndSleep}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <Text style={styles.modalTitle}>Terminer la sieste</Text>
+            <Text style={styles.helperTextModal}>
+              Heure de début : {formatTime((event as SleepEvent).startAt || event.at)}
+            </Text>
+            <Text style={styles.sectionTitleModal}>Heure de fin (HH:mm)</Text>
+            <TextInput
+              style={styles.timeInput}
+              value={endTimeInput}
+              onChangeText={handleEndTimeInputChange}
+              placeholder={formatTimeForInput(Date.now())}
+              placeholderTextColor={Colors.neutral.darkGray}
+              keyboardType="numeric"
+              maxLength={5}
+            />
+            <Text style={styles.helperTextModal}>
+              Laissez vide pour utiliser l'heure actuelle
+            </Text>
+            <View style={styles.modalButtons}>
+              <Pressable 
+                onPress={handleCancelEndSleep} 
+                style={[styles.modalButton, styles.cancelButton]}
+              >
+                <Text style={styles.cancelButtonText}>Annuler</Text>
+              </Pressable>
+              <Pressable 
+                onPress={handleSaveEndSleep} 
+                style={[styles.modalButton, styles.saveButton]}
+              >
+                <Text style={styles.saveButtonText}>Terminer</Text>
               </Pressable>
             </View>
           </View>
@@ -508,5 +617,31 @@ const styles = StyleSheet.create({
   deleteConfirmButtonText: {
     color: Colors.neutral.white,
     fontWeight: '600',
+  },
+  endSleepButton: {
+    marginTop: Spacing.xs,
+    backgroundColor: Colors.pastel.lavender,
+    paddingVertical: Spacing.xs,
+    paddingHorizontal: Spacing.sm,
+    borderRadius: BorderRadius.sm,
+    alignSelf: 'flex-start',
+  },
+  endSleepButtonText: {
+    fontSize: FontSize.xs,
+    color: Colors.neutral.white,
+    fontWeight: '600',
+  },
+  sectionTitleModal: {
+    fontSize: FontSize.md,
+    fontWeight: '600',
+    color: Colors.neutral.charcoal,
+    marginTop: Spacing.md,
+    marginBottom: Spacing.sm,
+  },
+  helperTextModal: {
+    fontSize: FontSize.sm,
+    color: Colors.neutral.darkGray,
+    marginBottom: Spacing.sm,
+    fontStyle: 'italic',
   },
 });

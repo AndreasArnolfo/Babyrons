@@ -137,14 +137,35 @@ export default function AddEventModal() {
             });
           }
         } else {
-          // Nouveau début de sieste
+          // Nouveau début de sieste (avec ou sans heure de fin)
           const startTime = sleepStartAt ? parseTimeInput(sleepStartAt) : Date.now();
-          addEvent({
-            ...baseEvent,
-            type: 'sleep',
-            startAt: startTime,
-            at: startTime,
-          });
+          const endTime = sleepEndAt ? parseTimeInput(sleepEndAt) : undefined;
+          
+          // Si une heure de fin est fournie, calculer la durée
+          const duration = endTime ? endTime - startTime : undefined;
+          
+          // Vérifier que l'heure de fin est après l'heure de début
+          if (endTime && endTime <= startTime) {
+            // Afficher une erreur ou utiliser l'heure actuelle comme fin
+            const correctedEndTime = Date.now();
+            addEvent({
+              ...baseEvent,
+              type: 'sleep',
+              startAt: startTime,
+              endAt: correctedEndTime,
+              duration: correctedEndTime - startTime,
+              at: startTime,
+            });
+          } else {
+            addEvent({
+              ...baseEvent,
+              type: 'sleep',
+              startAt: startTime,
+              endAt: endTime,
+              duration,
+              at: startTime,
+            });
+          }
         }
         break;
       
@@ -347,6 +368,17 @@ export default function AddEventModal() {
               />
               <Text style={styles.helperText}>
                 Laissez vide pour utiliser l'heure actuelle
+              </Text>
+              <Text style={styles.sectionTitle}>Heure de fin (HH:mm) - Optionnel</Text>
+              <TextInput
+                style={styles.input}
+                value={sleepEndAt}
+                onChangeText={setSleepEndAt}
+                placeholder="Laissez vide pour une sieste en cours"
+                placeholderTextColor={Colors.neutral.darkGray}
+              />
+              <Text style={styles.helperText}>
+                Remplissez pour créer une sieste complète avec début et fin
               </Text>
             </>
           )}

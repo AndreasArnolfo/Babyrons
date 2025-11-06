@@ -277,14 +277,16 @@ export const useBabyStore = create<BabyStore>((set, get) => {
   updateEventFromSupabase: (id: string, updates: Partial<Event>) => {
     const events = get().events;
     const event = events.find(e => e.id === id);
+    console.log("🔧 updateEventFromSupabase appelé:", { id, eventExists: !!event, updates });
     if (!event) {
+      console.warn("⚠️ Événement non trouvé pour mise à jour:", id);
       return; // N'existe pas, ne rien faire
     }
-    set(state => ({
-      events: state.events.map(e => 
-        e.id === id ? { ...e, ...updates } as Event : e
-      ),
-    }));
+    const updatedEvents = events.map(e => 
+      e.id === id ? { ...e, ...updates } as Event : e
+    );
+    console.log("✅ Événement mis à jour dans le store:", { id, before: event, after: updatedEvents.find(e => e.id === id) });
+    set({ events: updatedEvents });
     get().saveToStorage();
   },
   

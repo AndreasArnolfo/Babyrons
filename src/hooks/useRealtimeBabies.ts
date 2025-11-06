@@ -7,67 +7,132 @@ export function useRealtimeBabies() {
   const { addBabyFromSupabase, updateBabyFromSupabase, removeBabyFromSupabase } = useBabyStore();
 
   useEffect(() => {
-    console.log("👶 useRealtimeBabies monté");
+    let channel: ReturnType<typeof supabase.channel> | null = null;
 
-    // on garde la référence du canal pour le cleanup
-    const channel = supabase
-      .channel("babies-sync", { config: { broadcast: { ack: true } } })
-      .on(
-        "postgres_changes",
-        { event: "*", schema: "public", table: "babies" },
-        (payload) => {
-          console.log("📡 Realtime bébé reçu :", payload.eventType, payload);
+    (async () => {
+      // --- 1️⃣ Récupère l'utilisateur connecté ---
+      const { data: u } = await supabase.auth.getUser();
+      const user = u?.user;
+      if (!user) {
+        console.log("⚠️ Aucun utilisateur connecté, realtime bébés non activé.");
+        return;
+      }
 
-          switch (payload.eventType) {
-            case "INSERT":
-              // ✅ éviter les doublons et convertir les données Supabase au format local
-              if (
-                !useBabyStore
-                  .getState()
-                  .babies.some((b) => b.id === payload.new.id)
-              ) {
-                // Convertir les données Supabase au format ExtendedBaby
-                const baby: ExtendedBaby = {
-                  id: payload.new.id,
-                  name: payload.new.name,
-                  color: payload.new.color || null,
-                  photo: payload.new.photo ?? null,
-                  gender: payload.new.gender ?? null,
-                  birthDate: payload.new.birth_date ? Number(payload.new.birth_date) : null,
-                  createdAt: Number(payload.new.created_at) || Date.now(),
-                };
-                addBabyFromSupabase(baby);
-              }
-              break;
+      // --- 2️⃣ Détermine automatiquement si user_id = UUID ou email ---
+      let filterValue: string | null = user.id; // on suppose UUID par défaut
+      try {
+        const { data } = await supabase
+          .from("babies")
+          .select("user_id")
+          .limit(1);
 
-            case "UPDATE":
-              // Convertir les données Supabase au format local
-              console.log("🔄 Mise à jour bébé realtime:", payload.new.id);
-              const updates: Partial<ExtendedBaby> = {
+        const sample = data?.[0]?.user_id ?? "";
+        if (sample && sample.includes("@")) {
+          filterValue = user.email ?? null;
+        }
+      } catch (e) {
+        console.log("🔎 Impossible de détecter le type de user_id :", e);
+      }
+
+      // --- 3️⃣ Construction du canal Realtime ---
+      // Pour INSERT/UPDATE, on utilise le filtre
+      // Pour DELETE, on écoute tout et on filtre manuellement (car les filtres ne fonctionnent pas toujours avec DELETE)
+      const filterObj =
+        filterValue !== null
+          ? { filter: `user_id=eq.${filterValue}` }
+          : {};
+
+      console.log("🧩 Abonnement Realtime bébés avec filtre :", filterObj);
+
+      // Canal pour INSERT et UPDATE avec filtre
+      channel = supabase
+        .channel("babies-sync", { config: { broadcast: { ack: true } } })
+        .on(
+          "postgres_changes",
+          { event: "INSERT", schema: "public", table: "babies", ...filterObj },
+          (payload) => {
+            console.log("📡 Realtime bébé INSERT reçu :", payload);
+            // ✅ éviter les doublons et convertir les données Supabase au format local
+            if (
+              !useBabyStore
+                .getState()
+                .babies.some((b) => b.id === payload.new.id)
+            ) {
+              // Convertir les données Supabase au format ExtendedBaby
+              const baby: ExtendedBaby = {
+                id: payload.new.id,
                 name: payload.new.name,
                 color: payload.new.color || null,
                 photo: payload.new.photo ?? null,
                 gender: payload.new.gender ?? null,
                 birthDate: payload.new.birth_date ? Number(payload.new.birth_date) : null,
+                createdAt: Number(payload.new.created_at) || Date.now(),
               };
-              console.log("✅ Mise à jour appliquée:", { id: payload.new.id, updates });
-              updateBabyFromSupabase(payload.new.id, updates);
-              break;
-
-            case "DELETE":
-              console.log("🗑️ Suppression bébé realtime:", payload.old.id);
-              removeBabyFromSupabase(payload.old.id);
-              break;
+              addBabyFromSupabase(baby);
+            }
           }
-        }
-      )
+        )
+        .on(
+          "postgres_changes",
+          { event: "UPDATE", schema: "public", table: "babies", ...filterObj },
+          (payload) => {
+            console.log("🔄 Mise à jour bébé realtime:", payload.new.id);
+            const updates: Partial<ExtendedBaby> = {
+              name: payload.new.name,
+              color: payload.new.color || null,
+              photo: payload.new.photo ?? null,
+              gender: payload.new.gender ?? null,
+              birthDate: payload.new.birth_date ? Number(payload.new.birth_date) : null,
+            };
+            console.log("✅ Mise à jour appliquée:", { id: payload.new.id, updates });
+            updateBabyFromSupabase(payload.new.id, updates);
+          }
+        )
+        .on(
+          "postgres_changes",
+          { event: "DELETE", schema: "public", table: "babies" },
+          (payload) => {
+            console.log("🗑️ Suppression bébé realtime - payload complet:", JSON.stringify(payload, null, 2));
+            // Vérifier que le bébé supprimé appartient à cet utilisateur
+            if (payload.old?.id) {
+              const babyId = payload.old.id;
+              // Vérifier si le bébé existe dans notre store local
+              // Si oui, c'est qu'il nous appartient (on ne charge que nos bébés)
+              const babyExists = useBabyStore.getState().babies.some(b => b.id === babyId);
+              
+              if (babyExists) {
+                console.log("✅ Suppression du bébé avec ID:", babyId);
+                removeBabyFromSupabase(babyId);
+              } else {
+                // Si le bébé n'existe pas dans notre store, vérifier le user_id si disponible
+                const deletedUserId = payload.old.user_id;
+                if (deletedUserId && filterValue && deletedUserId === filterValue) {
+                  console.log("✅ Suppression du bébé avec ID (vérifié par user_id):", babyId);
+                  removeBabyFromSupabase(babyId);
+                } else {
+                  console.log("⏭️ Suppression ignorée (bébé n'existe pas dans le store local)", {
+                    babyId,
+                    babyExists,
+                    deletedUserId,
+                    filterValue
+                  });
+                }
+              }
+            } else {
+              console.error("❌ Pas d'ID dans payload.old pour DELETE:", payload);
+            }
+          }
+        )
       .subscribe((status) => {
         console.log("🔄 Canal babies-sync status:", status);
       });
+    })();
 
     return () => {
-      console.log("🧹 useRealtimeBabies démonté");
-      supabase.removeChannel(channel);
+      if (channel) {
+        console.log("🧹 useRealtimeBabies démonté");
+        supabase.removeChannel(channel);
+      }
     };
   }, []);
 }

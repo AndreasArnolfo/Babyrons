@@ -139,7 +139,6 @@ export default function ManageBabyModal() {
         Alert.alert("Succès", "Bébé modifié avec succès !");
         setEditingBabyId(null);
       } else {
-        // ➕ Mode ajout - utiliser addBaby du store qui gère la synchronisation
         addBaby({
           name: newBabyName.trim(),
           gender: selectedSex,

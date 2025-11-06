@@ -21,12 +21,16 @@ interface BabyStore {
   addBaby: (babyData: { name: string; gender?: 'male' | 'female' | null; birthDate?: number | null; photo?: string | null }) => void;
   addBabyFromSupabase: (baby: ExtendedBaby) => void; // Pour ajouter un bébé venant de Supabase (sans upsert)
   removeBaby: (id: string) => void;
+  removeBabyFromSupabase: (id: string) => void; // Pour supprimer un bébé venant de Supabase (sans delete)
   updateBaby: (id: string, updates: Partial<ExtendedBaby>) => void;
+  updateBabyFromSupabase: (id: string, updates: Partial<ExtendedBaby>) => void; // Pour mettre à jour un bébé venant de Supabase (sans upsert)
   
   addEvent: (event: Omit<Event, 'id' | 'createdBy'>) => void;
   addEventFromSupabase: (event: Event) => void; // Pour ajouter un événement venant de Supabase (sans upsert)
   removeEvent: (id: string) => void;
+  removeEventFromSupabase: (id: string) => void; // Pour supprimer un événement venant de Supabase (sans delete)
   updateEvent: (id: string, updates: Partial<Event>) => void;
+  updateEventFromSupabase: (id: string, updates: Partial<Event>) => void; // Pour mettre à jour un événement venant de Supabase (sans upsert)
   getEventsByBaby: (babyId: string) => Event[];
   getEventsByType: (type: ServiceType) => Event[];
   
@@ -170,6 +174,20 @@ export const useBabyStore = create<BabyStore>((set, get) => {
     const userId = get().userId;
     if (userId) { void deleteBabyAndEvents(userId, id); }
   },
+
+  // Supprimer un bébé venant de Supabase (sans déclencher de delete pour éviter les boucles)
+  removeBabyFromSupabase: (id: string) => {
+    const babies = get().babies;
+    // Vérifier qu'il existe
+    if (!babies.some(b => b.id === id)) {
+      return; // N'existe pas, ne rien faire
+    }
+    set(state => ({
+      babies: state.babies.filter(b => b.id !== id),
+      events: state.events.filter(e => e.babyId !== id),
+    }));
+    get().saveToStorage();
+  },
   
   updateBaby: (id: string, updates: Partial<ExtendedBaby>) => {
     set(state => ({
@@ -181,6 +199,19 @@ export const useBabyStore = create<BabyStore>((set, get) => {
       const updatedBaby = get().babies.find(b => b.id === id);
       if (updatedBaby) { void upsertBaby(userId, updatedBaby); }
     }
+  },
+
+  // Mettre à jour un bébé venant de Supabase (sans déclencher d'upsert pour éviter les boucles)
+  updateBabyFromSupabase: (id: string, updates: Partial<ExtendedBaby>) => {
+    const babies = get().babies;
+    const baby = babies.find(b => b.id === id);
+    if (!baby) {
+      return; // N'existe pas, ne rien faire
+    }
+    set(state => ({
+      babies: state.babies.map(b => b.id === id ? { ...b, ...updates } : b),
+    }));
+    get().saveToStorage();
   },
   
   addEvent: (event: Omit<Event, 'id' | 'createdBy'>) => {
@@ -214,6 +245,19 @@ export const useBabyStore = create<BabyStore>((set, get) => {
     const userId = get().userId;
     if (userId) { void deleteEvent(userId, id); }
   },
+
+  // Supprimer un événement venant de Supabase (sans déclencher de delete pour éviter les boucles)
+  removeEventFromSupabase: (id: string) => {
+    const events = get().events;
+    // Vérifier qu'il existe
+    if (!events.some(e => e.id === id)) {
+      return; // N'existe pas, ne rien faire
+    }
+    set(state => ({
+      events: state.events.filter(e => e.id !== id),
+    }));
+    get().saveToStorage();
+  },
   
   updateEvent: (id: string, updates: Partial<Event>) => {
     set(state => ({
@@ -227,6 +271,21 @@ export const useBabyStore = create<BabyStore>((set, get) => {
       const updatedEvent = get().events.find(e => e.id === id);
       if (updatedEvent) { void upsertEvent(userId, updatedEvent); }
     }
+  },
+
+  // Mettre à jour un événement venant de Supabase (sans déclencher d'upsert pour éviter les boucles)
+  updateEventFromSupabase: (id: string, updates: Partial<Event>) => {
+    const events = get().events;
+    const event = events.find(e => e.id === id);
+    if (!event) {
+      return; // N'existe pas, ne rien faire
+    }
+    set(state => ({
+      events: state.events.map(e => 
+        e.id === id ? { ...e, ...updates } as Event : e
+      ),
+    }));
+    get().saveToStorage();
   },
   
   getEventsByBaby: (babyId: string) => {

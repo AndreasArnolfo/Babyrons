@@ -9,7 +9,7 @@ import { useBabyStore } from "@/src/state/useBabyStore";
  */
 export function useRealtimeEvents() {
   const supabase = getSupabase();
-  const { addEventFromSupabase, updateEvent, removeEvent } = useBabyStore();
+  const { addEventFromSupabase, updateEventFromSupabase, removeEventFromSupabase } = useBabyStore();
 
   useEffect(() => {
     let channel: ReturnType<typeof supabase.channel> | null = null;
@@ -96,6 +96,7 @@ export function useRealtimeEvents() {
                 break;
               case "UPDATE":
                 // Convertir les données Supabase au format local
+                console.log("🔄 Mise à jour événement realtime:", payload.new.id);
                 const updates: Partial<Event> = {
                   babyId: payload.new.baby_id,
                   type: payload.new.type,
@@ -112,10 +113,12 @@ export function useRealtimeEvents() {
                   heightCm: payload.new.height_cm ?? undefined,
                   headCircumferenceCm: payload.new.head_circumference_cm ?? undefined,
                 };
-                updateEvent(payload.new.id, updates);
+                console.log("✅ Mise à jour appliquée:", { id: payload.new.id, updates });
+                updateEventFromSupabase(payload.new.id, updates);
                 break;
               case "DELETE":
-                removeEvent(payload.old.id);
+                console.log("🗑️ Suppression événement realtime:", payload.old.id);
+                removeEventFromSupabase(payload.old.id);
                 break;
             }
           }

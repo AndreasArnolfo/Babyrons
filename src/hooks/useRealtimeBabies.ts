@@ -4,7 +4,7 @@ import { useBabyStore } from "@/src/state/useBabyStore";
 
 export function useRealtimeBabies() {
   const supabase = getSupabase();
-  const { addBabyFromSupabase, updateBaby, removeBaby } = useBabyStore();
+  const { addBabyFromSupabase, updateBabyFromSupabase, removeBabyFromSupabase } = useBabyStore();
 
   useEffect(() => {
     console.log("👶 useRealtimeBabies monté");
@@ -42,6 +42,7 @@ export function useRealtimeBabies() {
 
             case "UPDATE":
               // Convertir les données Supabase au format local
+              console.log("🔄 Mise à jour bébé realtime:", payload.new.id);
               const updates: Partial<ExtendedBaby> = {
                 name: payload.new.name,
                 color: payload.new.color || null,
@@ -49,11 +50,13 @@ export function useRealtimeBabies() {
                 gender: payload.new.gender ?? null,
                 birthDate: payload.new.birth_date ? Number(payload.new.birth_date) : null,
               };
-              updateBaby(payload.new.id, updates);
+              console.log("✅ Mise à jour appliquée:", { id: payload.new.id, updates });
+              updateBabyFromSupabase(payload.new.id, updates);
               break;
 
             case "DELETE":
-              removeBaby(payload.old.id);
+              console.log("🗑️ Suppression bébé realtime:", payload.old.id);
+              removeBabyFromSupabase(payload.old.id);
               break;
           }
         }

@@ -1,4 +1,7 @@
+// ... (imports)
+import { ExtendedBaby } from "@/src/data/types";
 import { useEffect } from "react";
+// ...
 import { getSupabase } from "@/src/utils/supabase";
 import { useBabyStore } from "@/src/state/useBabyStore";
 
@@ -7,6 +10,7 @@ export function useRealtimeBabies() {
   const { addBabyFromSupabase, updateBabyFromSupabase, removeBabyFromSupabase } = useBabyStore();
 
   useEffect(() => {
+    if (!supabase) return;
     let channel: ReturnType<typeof supabase.channel> | null = null;
 
     (async () => {

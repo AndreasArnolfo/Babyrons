@@ -1,8 +1,9 @@
 import React from "react";
-import { View, Text, StyleSheet, Pressable, Image } from "react-native";
+import { View, Text, StyleSheet, Image } from "react-native";
 import { Baby } from "../data/types";
 import { Colors } from "../theme/colors";
 import { Spacing, BorderRadius, FontSize } from "../theme/spacing";
+import { ScalePressable } from "./common/ScalePressable";
 
 interface BabyCardProps {
   baby: Baby;
@@ -26,19 +27,18 @@ export function BabyCard({ baby, onPress, isSelected = false }: BabyCardProps) {
   const imageSource = baby.photo
     ? { uri: baby.photo }
     : baby.gender === "female"
-    ? defaultImageF
-    : baby.gender === "male"
-    ? defaultImageM
-    : defaultImage;
+      ? defaultImageF
+      : baby.gender === "male"
+        ? defaultImageM
+        : defaultImage;
 
   return (
-    <Pressable
+    <ScalePressable
       onPress={onPress}
-      style={({ pressed }) => [
+      style={[
         styles.card,
         { borderColor: baby.color || Colors.pastel.rose },
         isSelected && styles.selected,
-        pressed && styles.pressed,
       ]}
     >
       <View style={styles.imageContainer}>
@@ -50,7 +50,7 @@ export function BabyCard({ baby, onPress, isSelected = false }: BabyCardProps) {
       </View>
 
       <Text style={styles.name}>{babyName}</Text>
-    </Pressable>
+    </ScalePressable>
   );
 }
 
@@ -72,10 +72,6 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.1,
     shadowRadius: 4,
     elevation: 3,
-  },
-  pressed: {
-    transform: [{ scale: 0.96 }],
-    opacity: 0.9,
   },
   selected: {
     borderWidth: 3,

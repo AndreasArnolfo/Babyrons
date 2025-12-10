@@ -5,6 +5,7 @@ export const Colors = {
     lavender: '#E6D5F5',
     peach: '#FFD4B8',
     sky: '#B3E5FC',
+    skyActive: '#3182CE', // Blue 500 for actions
     rose: '#FFB3C6',
     lemon: '#FFF9C4',
     coral: '#FFCCBC',
@@ -27,6 +28,56 @@ export const Colors = {
     boy: '#B3E5FC',
     girl: '#FFB3C6',
     neutral: '#E6F4FE',
+  },
+  fantasy: {
+    gradientStart: '#4c669f',
+    gradientEnd: '#3b5998',
+    glassBorder: 'rgba(255, 255, 255, 0.5)',
+    glassBg: 'rgba(255, 255, 255, 0.2)',
+    textLight: '#FFFFFF',
+    textDark: '#1F2937',
+    accent: '#FFD700', // Gold for active/awake
+  },
+  modern: {
+    background: '#FFFBF0', // "Warm Cream" - Soft, paper-like
+    surface: '#FFFFFF',    // Pure white for cards
+    text: '#2D3748',       // Soft Charcoal
+    textSecondary: '#718096', // Cool Gray for secondary text
+    accent: '#805AD5',     // Soft Purple
+    border: '#F3F4F6',
+  },
+  gradients: {
+    mint: ['#E0FFEF', '#A8F0C6'] as const,
+    lavender: ['#F8F0FF', '#E9D8FD'] as const,
+    sky: ['#EBF8FF', '#BEE3F8'] as const,
+    rose: ['#FFF5F7', '#FED7E2'] as const,
+    lemon: ['#FFFFF0', '#FEFCBF'] as const, // Extra soft lemon
+    blue: ['#EBF8FF', '#90CDF4'] as const,
+    pink: ['#FFF5F7', '#FBB6CE'] as const,
+    warmOverlay: ['rgba(255, 255, 255, 0)', 'rgba(255, 251, 240, 1)'] as const, // Cream fade
+  },
+  shadows: {
+    soft: {
+      shadowColor: '#805AD5', // Purple tint
+      shadowOffset: { width: 0, height: 4 },
+      shadowOpacity: 0.06,
+      shadowRadius: 12,
+      elevation: 3,
+    },
+    medium: {
+      shadowColor: '#000',
+      shadowOffset: { width: 0, height: 8 },
+      shadowOpacity: 0.08,
+      shadowRadius: 16,
+      elevation: 6,
+    },
+    glow: {
+      shadowColor: '#F6AD55', // Orange/Warm glow
+      shadowOffset: { width: 0, height: 0 },
+      shadowOpacity: 0.15,
+      shadowRadius: 20,
+      elevation: 8,
+    },
   },
 };
 

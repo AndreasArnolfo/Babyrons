@@ -10,6 +10,12 @@ export interface Baby {
   createdAt: number;
 }
 
+// 🍼 Nouveau : interface Baby enrichie
+export interface ExtendedBaby extends Baby {
+  gender?: 'male' | 'female' | null;
+  photo: string | null;
+}
+
 export interface BaseEvent {
   id: string;
   babyId: string;

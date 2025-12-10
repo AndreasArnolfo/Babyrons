@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { View, Text, StyleSheet, TextInput, Pressable, ScrollView } from 'react-native';
-import { useRouter } from 'expo-router';
+import { useRouter, useLocalSearchParams } from 'expo-router';
 import { useBabyStore } from '../../src/state/useBabyStore';
 import { ServiceType } from '../../src/data/types';
 import { Colors } from '../../src/theme/colors';
@@ -8,29 +8,35 @@ import { Spacing, BorderRadius, FontSize } from '../../src/theme/spacing';
 
 export default function AddEventModal() {
   const router = useRouter();
+  const params = useLocalSearchParams();
+  const initialType = (params.type as ServiceType) || null;
+  const initialBabyId = (params.babyId as string) || '';
+
   const { babies, addEvent, removeEvent, settings, events } = useBabyStore();
-  const [selectedBaby, setSelectedBaby] = useState<string>('');
+  const [selectedBaby, setSelectedBaby] = useState<string>(initialBabyId);
   const [eventType, setEventType] = useState<ServiceType>(
-    settings.enabledServices[0] || 'bottle'
+    initialType && settings.enabledServices.includes(initialType)
+      ? initialType
+      : settings.enabledServices[0] || 'bottle'
   );
-  
+
   // États pour biberon
   const [bottleMl, setBottleMl] = useState('');
   const [bottleKind, setBottleKind] = useState<'breastmilk' | 'formula' | 'mixed'>('formula');
-  
+
   // États pour sommeil
   const [sleepStartAt, setSleepStartAt] = useState<string>('');
   const [sleepEndAt, setSleepEndAt] = useState<string>('');
   const [isSleepOngoing, setIsSleepOngoing] = useState(false);
-  
+
   // États pour médicament
   const [medName, setMedName] = useState('');
   const [medDose, setMedDose] = useState('');
   const [medNote, setMedNote] = useState('');
-  
+
   // États pour couche
   const [diaperKind, setDiaperKind] = useState<'wet' | 'dirty' | 'both'>('both');
-  
+
   // États pour croissance
   const [weightKg, setWeightKg] = useState('');
   const [heightCm, setHeightCm] = useState('');
@@ -101,7 +107,7 @@ export default function AddEventModal() {
           kind: bottleKind,
         });
         break;
-      
+
       case 'sleep':
         if (isSleepOngoing) {
           // Terminer une sieste en cours
@@ -111,12 +117,12 @@ export default function AddEventModal() {
               const sleepEvent = e as any;
               return sleepEvent.startAt && !sleepEvent.endAt;
             });
-          
+
           if (ongoingSleep) {
             const endTime = sleepEndAt ? parseTimeInput(sleepEndAt) : Date.now();
             const startTime = (ongoingSleep as any).startAt;
             const duration = endTime - startTime;
-            
+
             // Mettre à jour l'événement existant
             removeEvent(ongoingSleep.id);
             addEvent({
@@ -140,10 +146,10 @@ export default function AddEventModal() {
           // Nouveau début de sieste (avec ou sans heure de fin)
           const startTime = sleepStartAt ? parseTimeInput(sleepStartAt) : Date.now();
           const endTime = sleepEndAt ? parseTimeInput(sleepEndAt) : undefined;
-          
+
           // Si une heure de fin est fournie, calculer la durée
           const duration = endTime ? endTime - startTime : undefined;
-          
+
           // Vérifier que l'heure de fin est après l'heure de début
           if (endTime && endTime <= startTime) {
             // Afficher une erreur ou utiliser l'heure actuelle comme fin
@@ -168,7 +174,7 @@ export default function AddEventModal() {
           }
         }
         break;
-      
+
       case 'diaper':
         addEvent({
           ...baseEvent,
@@ -176,7 +182,7 @@ export default function AddEventModal() {
           kind: diaperKind,
         });
         break;
-      
+
       case 'med':
         if (!medName.trim()) return;
         addEvent({
@@ -187,14 +193,14 @@ export default function AddEventModal() {
           note: medNote.trim() || undefined,
         });
         break;
-      
+
       case 'growth':
         const weight = weightKg ? parseFloat(weightKg) : undefined;
         const height = heightCm ? parseFloat(heightCm) : undefined;
         const head = headCircumferenceCm ? parseFloat(headCircumferenceCm) : undefined;
-        
+
         if (!weight && !height && !head) return;
-        
+
         addEvent({
           ...baseEvent,
           type: 'growth',
@@ -210,7 +216,7 @@ export default function AddEventModal() {
 
   const canSave = () => {
     if (!selectedBaby || !settings.enabledServices.includes(eventType)) return false;
-    
+
     switch (eventType) {
       case 'bottle':
         const ml = parseInt(bottleMl);
@@ -226,9 +232,9 @@ export default function AddEventModal() {
         const heightVal = heightCm ? parseFloat(heightCm) : undefined;
         const headVal = headCircumferenceCm ? parseFloat(headCircumferenceCm) : undefined;
         // Au moins un nombre valide (pas NaN)
-        return (weightVal !== undefined && !isNaN(weightVal)) || 
-               (heightVal !== undefined && !isNaN(heightVal)) || 
-               (headVal !== undefined && !isNaN(headVal));
+        return (weightVal !== undefined && !isNaN(weightVal)) ||
+          (heightVal !== undefined && !isNaN(heightVal)) ||
+          (headVal !== undefined && !isNaN(headVal));
       case 'diaper':
         return true; // Toujours valide
       default:
@@ -280,10 +286,10 @@ export default function AddEventModal() {
             >
               <Text style={styles.optionText}>
                 {service === 'bottle' ? '🍼 Biberon' :
-                 service === 'sleep' ? '😴 Sommeil' :
-                 service === 'med' ? '💊 Médicament' :
-                 service === 'diaper' ? '👶 Couche' :
-                 '📏 Croissance'}
+                  service === 'sleep' ? '😴 Sommeil' :
+                    service === 'med' ? '💊 Médicament' :
+                      service === 'diaper' ? '👶 Couche' :
+                        '📏 Croissance'}
               </Text>
             </Pressable>
           ))
@@ -489,8 +495,8 @@ export default function AddEventModal() {
         </View>
       )}
 
-      <Pressable 
-        onPress={handleSave} 
+      <Pressable
+        onPress={handleSave}
         style={[
           styles.saveButton,
           !canSave() && styles.saveButtonDisabled

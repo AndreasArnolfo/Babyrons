@@ -1,6 +1,5 @@
 import { getSupabase } from '../utils/supabase';
-import { Baby, Event, AppSettings } from '../data/types';
-import { ExtendedBaby } from '../state/useBabyStore';
+import { Baby, Event, AppSettings, ExtendedBaby } from '../data/types';
 
 // Babies
 export async function fetchBabies(userId: string): Promise<ExtendedBaby[]> {

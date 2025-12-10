@@ -12,6 +12,7 @@ export function useRealtimeEvents() {
   const { addEventFromSupabase, updateEventFromSupabase, removeEventFromSupabase } = useBabyStore();
 
   useEffect(() => {
+    if (!supabase) return;
     let channel: ReturnType<typeof supabase.channel> | null = null;
 
     (async () => {

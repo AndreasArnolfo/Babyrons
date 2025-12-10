@@ -23,10 +23,12 @@ export default function LoginScreen() {
       return;
     }
     setLoading(true);
+    console.log(`[Login] Attempting login for email: ${email.trim()}, password length: ${password.length}`);
     const { error } = await supabase.auth.signInWithPassword({ email: email.trim(), password });
     setLoading(false);
     if (error) {
-      Alert.alert('Connexion échouée', error.message);
+      console.error('Login error details:', error);
+      Alert.alert('Connexion échouée', error.message || 'Une erreur inconnue est survenue');
       return;
     }
     router.replace('/(tabs)');
@@ -106,9 +108,9 @@ export default function LoginScreen() {
           placeholderTextColor={Colors.neutral.darkGray}
         />
 
-        <Pressable 
-          style={styles.forgotPasswordButton} 
-          onPress={handleForgotPassword} 
+        <Pressable
+          style={styles.forgotPasswordButton}
+          onPress={handleForgotPassword}
           disabled={resetLoading || loading}
         >
           {resetLoading ? (
@@ -157,14 +159,14 @@ const styles = StyleSheet.create({
   },
   buttonDisabled: { opacity: 0.6 },
   buttonText: { color: Colors.neutral.white, fontSize: FontSize.lg, fontWeight: '700' },
-  forgotPasswordButton: { 
-    alignItems: 'flex-end', 
+  forgotPasswordButton: {
+    alignItems: 'flex-end',
     marginTop: Spacing.xs,
     marginBottom: Spacing.sm,
   },
-  forgotPasswordText: { 
-    color: Colors.pastel.mintActive, 
-    fontSize: FontSize.sm, 
+  forgotPasswordText: {
+    color: Colors.pastel.mintActive,
+    fontSize: FontSize.sm,
     fontWeight: '600',
     textDecorationLine: 'underline',
   },

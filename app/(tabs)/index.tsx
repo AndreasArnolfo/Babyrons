@@ -1,86 +1,70 @@
-import React, { useEffect, useState } from "react";
-import { ScrollView, View, Text, StyleSheet, Pressable, Image, SafeAreaView } from "react-native";
+import React, { useEffect, useState, useMemo } from "react";
+import { ScrollView, View, Text, StyleSheet, Image } from "react-native";
 import { useRouter } from "expo-router";
 import { useBabyStore } from "../../src/state/useBabyStore";
 import { BabyCard } from "../../src/components/BabyCard";
 import { EventCard } from "../../src/components/EventCard";
+import { DashboardSummary } from "../../src/components/DashboardSummary";
 import { PatternBackground } from "../../src/components/PatternBackground";
 import { Colors } from "../../src/theme/colors";
 import { Spacing, BorderRadius, FontSize } from "../../src/theme/spacing";
 import { getSupabase } from '@/src/utils/supabase';
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { Alert } from "react-native";
 import { useRealtimeEvents } from "@/src/hooks/useRealtimeEvents";
 import { useRealtimeBabies } from "@/src/hooks/useRealtimeBabies";
+import { CuteEmptyState } from "../../src/components/common/CuteEmptyState";
+import { ScalePressable } from "../../src/components/common/ScalePressable";
+import { FadeInEntry } from "../../src/components/common/FadeInEntry";
+import { QuickAddFab } from "../../src/components/QuickAddFab";
 
 function formatDisplayNameFromEmail(email: string): string {
   if (!email) return "";
-
-  // Partie avant le @
   const namePart = email.split("@")[0];
-
-  // Supprimer les chiffres, remplacer . par espace, et découper en mots
-  const words = namePart
-    .replace(/[0-9]/g, "")
-    .replace(/\./g, " ")
-    .split(" ")
-    .filter((w) => w.trim() !== "");
-
-  // Mettre une majuscule au début de chaque mot
-  const formatted = words
-    .map(
-      (word) =>
-        word.charAt(0).toUpperCase() + word.slice(1).toLowerCase()
-    )
-    .join(" ");
-
+  const words = namePart.replace(/[0-9]/g, "").replace(/\./g, " ").split(" ").filter((w) => w.trim() !== "");
+  const formatted = words.map((word) => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase()).join(" ");
   return formatted;
 }
 
 export default function Index() {
   useRealtimeEvents();
   useRealtimeBabies();
-  
+
   const router = useRouter();
   const { babies, events } = useBabyStore();
   const [selectedBabyId, setSelectedBabyId] = useState<string | null>(null);
 
-  // Filtrer les événements selon le bébé sélectionné
-  const filteredEvents = selectedBabyId
-    ? events.filter(e => e.babyId === selectedBabyId)
-    : events;
+  const filteredEvents = useMemo(() => {
+    return selectedBabyId
+      ? events.filter(e => e.babyId === selectedBabyId)
+      : events;
+  }, [selectedBabyId, events]);
 
-  const recentEvents = [...filteredEvents]
-    .sort((a, b) => b.at - a.at)
-    .slice(0, 10);
+  const recentEvents = useMemo(() => {
+    return [...filteredEvents]
+      .sort((a, b) => b.at - a.at)
+      .slice(0, 10);
+  }, [filteredEvents]);
+
+  // Restored: Logic to calculate which bottles should show "Time Since" (latest only)
+  const latestBottleIds = useMemo(() => {
+    const ids = new Set<string>();
+    const processedBabies = new Set<string>();
+    const sortedAllEvents = [...events].sort((a, b) => b.at - a.at);
+    for (const event of sortedAllEvents) {
+      if (event.type === 'bottle' && !processedBabies.has(event.babyId)) {
+        ids.add(event.id);
+        processedBabies.add(event.babyId);
+      }
+    }
+    return ids;
+  }, [events]);
 
   const handleBabyPress = (babyId: string) => {
-    // Si on clique sur le même bébé, on désélectionne
     setSelectedBabyId(prev => prev === babyId ? null : babyId);
   };
 
   const handleDeleteEvent = async (eventId: string) => {
-    const supabase = getSupabase();
-
-    if (!supabase) {
-      console.error("Supabase non configuré (variables manquantes)");
-      Alert.alert("Erreur", "Impossible de supprimer l'événement : Supabase non configuré.");
-      return;
-    }
-
-
-    const { data, error } = await supabase
-      .from("events")        // ✅ une seule table
-      .delete()
-      .eq("id", eventId)
-      .select();
-
-    if (error) {
-      console.error("❌ Erreur Supabase :", error.message);
-      Alert.alert("Erreur", "Impossible de supprimer l'événement : " + error.message);
-    } else {
-      useBabyStore.getState().removeEvent(eventId);
-    }
+    useBabyStore.getState().removeEvent(eventId);
   };
 
   const [displayName, setDisplayName] = useState<string>("");
@@ -88,15 +72,10 @@ export default function Index() {
     (async () => {
       const supabase = getSupabase();
       if (!supabase) return;
-
       try {
         const { data: userData } = await supabase.auth.getUser();
         const email = userData?.user?.email || "";
-
-        // Utilise notre fonction propre
         const formattedName = formatDisplayNameFromEmail(email);
-
-        // Si c’est vide (ex: email bizarre), fallback
         setDisplayName(formattedName || "Utilisateur Babyrons");
       } catch (err) {
         console.error("Erreur Supabase:", err);
@@ -105,112 +84,125 @@ export default function Index() {
     })();
   }, []);
 
-const logo = require("../../assets/images/logo-babyrons.png");
-const insets = useSafeAreaInsets();
+  const logo = require("../../assets/images/logo-babyrons.png");
+  const insets = useSafeAreaInsets();
+
   return (
     <PatternBackground>
       <ScrollView style={styles.container}>
-      <View
-      style={[
-        styles.headerContainer,
-        { paddingTop: insets.top }, // ✅ marge dynamique selon appareil
-      ]}
-      ></View>
-      <View style={styles.headerContainer}>
-        <View style={styles.header}>
-          <Text style={styles.greeting}>Bonjour {displayName} !</Text>
-          <Image
-            source={logo}
-            style={styles.logo}
-            resizeMode="contain"
-          />
-        </View>
-      </View>
-
-      
-      <View style={styles.section}>
-        <View style={styles.sectionHeader}>
-          <Text style={styles.sectionTitle}>Vos bébés</Text>
-          <Pressable onPress={() => router.push('/modals/manage-baby')}>
-            <Text style={styles.manageButton}>Gérer</Text>
-          </Pressable>
-        </View>
-        {babies.length === 0 ? (
-          <View style={styles.emptyState}>
-            <Text style={styles.emptyText}>Aucun bébé ajouté</Text>
-            <Text style={styles.emptySubtext}>
-              Appuyez sur "Gérer" pour ajouter votre premier bébé
-            </Text>
+        <View style={[styles.headerContainer, { paddingTop: insets.top }]} />
+        <View style={styles.headerContainer}>
+          <View style={styles.header}>
+            <Text style={styles.greeting}>Bonjour {displayName} !</Text>
+            <Image source={logo} style={styles.logo} resizeMode="contain" />
           </View>
-        ) : (
-          <ScrollView 
-            horizontal 
-            showsHorizontalScrollIndicator={false}
-            contentContainerStyle={styles.babiesContainer}
-            style={styles.babiesScrollView}
-          >
-            {babies.map((baby) => (
-              <BabyCard 
-                key={baby.id} 
-                baby={baby} 
-                onPress={() => handleBabyPress(baby.id)}
-                isSelected={selectedBabyId === baby.id}
-              />
-            ))}
-          </ScrollView>
-        )}
-      </View>
+        </View>
 
-      <View style={styles.section}>
-        <View style={styles.sectionHeader}>
-          <View style={styles.sectionTitleContainer}>
-            <Text style={styles.sectionTitle}>
-              {selectedBabyId 
-                ? `Événements - ${babies.find(b => b.id === selectedBabyId)?.name || 'Bébé'}`
-                : 'Événements récents'
-              }
-            </Text>
-            {selectedBabyId && (
-              <Pressable 
-                onPress={() => setSelectedBabyId(null)}
-                style={styles.clearFilterButton}
-              >
-                <Text style={styles.clearFilterText}>Tous</Text>
-              </Pressable>
-            )}
+        <DashboardSummary selectedBabyId={selectedBabyId} />
+
+        <View style={styles.section}>
+          <View style={styles.sectionHeader}>
+            <Text style={styles.sectionTitle}>Vos bébés</Text>
+            <ScalePressable onPress={() => router.push('/modals/manage-baby')}>
+              <Text style={styles.manageButton}>Gérer</Text>
+            </ScalePressable>
           </View>
-          {babies.length > 0 && (
-            <Pressable onPress={() => router.push('/modals/add-event')}>
-              <Text style={styles.addButton}>+ Ajouter</Text>
-            </Pressable>
+          {babies.length === 0 ? (
+            <CuteEmptyState
+              title="Bienvenue !"
+              message="Commencez par ajouter votre premier bébé pour suivre son quotidien."
+              icon="baby-face-outline"
+            />
+          ) : (
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={styles.babiesContainer}
+              style={styles.babiesScrollView}
+            >
+              {babies.map((baby) => (
+                <BabyCard
+                  key={baby.id}
+                  baby={baby}
+                  onPress={() => handleBabyPress(baby.id)}
+                  isSelected={selectedBabyId === baby.id}
+                />
+              ))}
+            </ScrollView>
           )}
         </View>
 
-        {recentEvents.length === 0 ? (
-          <View style={styles.emptyState}>
-            <Text style={styles.emptyText}>Aucun événement</Text>
-            <Text style={styles.emptySubtext}>
-              {selectedBabyId 
-                ? `Aucun événement pour ${babies.find(b => b.id === selectedBabyId)?.name || 'ce bébé'}. Ajoutez-en un !`
-                : 'Ajoutez votre premier événement pour commencer le suivi'
-              }
-            </Text>
+        <View style={styles.section}>
+          <View style={styles.sectionHeader}>
+            <View style={styles.sectionTitleContainer}>
+              <Text style={styles.sectionTitle}>
+                {selectedBabyId
+                  ? `Événements - ${babies.find(b => b.id === selectedBabyId)?.name || 'Bébé'}`
+                  : 'Événements récents'
+                }
+              </Text>
+              {selectedBabyId && (
+                <ScalePressable
+                  onPress={() => setSelectedBabyId(null)}
+                  style={styles.clearFilterButton}
+                >
+                  <Text style={styles.clearFilterText}>Tous</Text>
+                </ScalePressable>
+              )}
+            </View>
+            {babies.length > 0 && (
+              <ScalePressable onPress={() => router.push('/modals/add-event')}>
+                <Text style={styles.addButton}>+ Ajouter</Text>
+              </ScalePressable>
+            )}
           </View>
-        ) : (
-          recentEvents.map((event) => {
-            const baby = babies.find((b) => b.id === event.babyId);
-            return (
-              <EventCard
-                key={event.id}
-                event={event}
-                babyName={baby?.name || "Inconnu"}
-                onDelete={() => handleDeleteEvent(event.id)}
-              />
-            );
-          })
-        )}
-      </View>
-    </ScrollView>
+
+          {recentEvents.length === 0 ? (
+            <CuteEmptyState
+              title="C'est calme ici..."
+              message={selectedBabyId
+                ? "Aucun événement pour ce bébé. Ajoutez un biberon ou un dodo !"
+                : "Ajoutez votre premier événement pour commencer le journal de bord."
+              }
+              icon="book-open-page-variant-outline"
+            />
+          ) : (
+            recentEvents.map((event, index) => {
+              const baby = babies.find((b) => b.id === event.babyId);
+              return (
+                <FadeInEntry key={event.id} delay={index * 100}>
+                  <EventCard
+                    event={event}
+                    babyName={baby?.name || "Inconnu"}
+                    onDelete={() => handleDeleteEvent(event.id)}
+                    showTimeSince={latestBottleIds.has(event.id)}
+                  />
+                </FadeInEntry>
+              );
+            })
+          )}
+        </View>
+      </ScrollView>
+
+      {/* Quick Add FAB */}
+      <QuickAddFab
+        onPressOption={(type) => {
+          if (type === 'bottle') {
+            router.push({
+              pathname: '/modals/quick-bottle',
+              params: { babyId: selectedBabyId || '' }
+            });
+          } else {
+            router.push({
+              pathname: '/modals/add-event',
+              params: {
+                type,
+                babyId: selectedBabyId || ''
+              }
+            });
+          }
+        }}
+      />
     </PatternBackground>
   );
 }
@@ -270,12 +262,10 @@ const styles = StyleSheet.create({
     fontWeight: "700",
     color: Colors.neutral.charcoal,
   },
-  // container for the section title and optional clear button
   sectionTitleContainer: {
     flexDirection: "row",
     alignItems: "center",
   },
-  // button to clear the baby filter
   clearFilterButton: {
     marginLeft: Spacing.md,
   },
@@ -320,9 +310,9 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.neutral.white,
   },
   logo: {
-    width: 60,       // ✅ adapte selon ton image
+    width: 60,
     height: 60,
-    tintColor: undefined, // garde les vraies couleurs
-    backgroundColor: "transparent", // ✅ fond transparent
+    tintColor: undefined,
+    backgroundColor: "transparent",
   },
 });

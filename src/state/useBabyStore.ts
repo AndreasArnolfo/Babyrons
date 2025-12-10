@@ -1,14 +1,8 @@
 import { create } from 'zustand';
-import { Baby, Event, AppSettings, ServiceType } from '../data/types';
+import { Baby, Event, AppSettings, ServiceType, ExtendedBaby } from '../data/types';
 import { StorageKeys, getStorageItem, setStorageItem } from '../lib/storage';
 import { babyColors } from '../theme/colors';
 import { fetchBabies, fetchEvents, fetchSettings, upsertBaby, deleteBabyAndEvents, upsertEvent, deleteEvent, upsertSettings } from '../api/supabaseData';
-
-// 🍼 Nouveau : interface Baby enrichie
-export interface ExtendedBaby extends Baby {
-  gender?: 'male' | 'female' | null;
-  photo: string | null;
-}
 
 interface BabyStore {
   babies: ExtendedBaby[];

@@ -1,16 +1,13 @@
-import { Platform } from 'react-native';
+import { MMKV } from 'react-native-mmkv';
 
-let storage: any = null;
+let storage: MMKV | null = null;
 
-if (Platform.OS !== 'web') {
-  try {
-    const { MMKV } = require('react-native-mmkv');
-    storage = new MMKV({
-      id: 'babyrons-storage',
-    });
-  } catch (error) {
-    console.warn('MMKV not available, using fallback storage');
-  }
+try {
+  storage = new MMKV({
+    id: 'babyrons-storage',
+  });
+} catch (error) {
+  console.warn('MMKV failed to initialize:', error);
 }
 
 export const StorageKeys = {
@@ -21,32 +18,20 @@ export const StorageKeys = {
 
 export function getStorageItem<T>(key: string): T | null {
   try {
-    let item: string | null = null;
-    
-    if (Platform.OS === 'web') {
-      if (typeof window !== 'undefined' && window.localStorage) {
-        item = window.localStorage.getItem(key);
-      }
-    } else if (storage) {
-      item = storage.getString(key);
+    if (storage) {
+      const item = storage.getString(key);
+      return item ? JSON.parse(item) : null;
     }
-    
-    return item ? JSON.parse(item) : null;
   } catch (error) {
     console.error(`Error reading ${key} from storage:`, error);
-    return null;
   }
+  return null;
 }
 
 export function setStorageItem<T>(key: string, value: T): void {
   try {
-    const stringValue = JSON.stringify(value);
-    
-    if (Platform.OS === 'web') {
-      if (typeof window !== 'undefined' && window.localStorage) {
-        window.localStorage.setItem(key, stringValue);
-      }
-    } else if (storage) {
+    if (storage) {
+      const stringValue = JSON.stringify(value);
       storage.set(key, stringValue);
     }
   } catch (error) {
@@ -56,11 +41,7 @@ export function setStorageItem<T>(key: string, value: T): void {
 
 export function removeStorageItem(key: string): void {
   try {
-    if (Platform.OS === 'web') {
-      if (typeof window !== 'undefined' && window.localStorage) {
-        window.localStorage.removeItem(key);
-      }
-    } else if (storage) {
+    if (storage) {
       storage.delete(key);
     }
   } catch (error) {
@@ -70,11 +51,7 @@ export function removeStorageItem(key: string): void {
 
 export function clearStorage(): void {
   try {
-    if (Platform.OS === 'web') {
-      if (typeof window !== 'undefined' && window.localStorage) {
-        window.localStorage.clear();
-      }
-    } else if (storage) {
+    if (storage) {
       storage.clearAll();
     }
   } catch (error) {

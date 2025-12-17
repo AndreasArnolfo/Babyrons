@@ -131,6 +131,9 @@ export const useBabyStore = create<BabyStore>((set, get) => {
         void upsertSettings(userId, finalSettings);
       }
       get().saveToStorage();
+
+      // Sync notifications for all babies to ensure reminders are active
+      migratedBabies.forEach(baby => syncBabyNotifications(get, baby.id));
     },
 
     addBaby: (babyData) => {
@@ -351,6 +354,9 @@ export const useBabyStore = create<BabyStore>((set, get) => {
       const events = getStorageItem<Event[]>(StorageKeys.EVENTS) || [];
       const settings = getStorageItem<AppSettings>(StorageKeys.SETTINGS) || defaultSettings;
       set({ babies, events, settings });
+
+      // Sync notifications for all babies on local load
+      babies.forEach(baby => syncBabyNotifications(get, baby.id));
     },
 
     saveToStorage: () => {

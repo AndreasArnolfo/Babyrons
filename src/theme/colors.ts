@@ -7,6 +7,7 @@ export const Colors = {
     sky: '#B3E5FC',
     skyActive: '#3182CE', // Blue 500 for actions
     rose: '#FFB3C6',
+    roseActive: '#F687B3', // Darker rose for actions
     lemon: '#FFF9C4',
     coral: '#FFCCBC',
   },
@@ -17,6 +18,22 @@ export const Colors = {
     darkGray: '#6B7280',
     charcoal: '#1F2937',
     black: '#000000',
+  },
+  dark: {
+    background: '#1A202C', // Cool Gray 900
+    surface: '#2D3748',    // Cool Gray 800
+    text: '#F7FAFC',       // Gray 50
+    textSecondary: '#A0AEC0', // Gray 400
+    border: '#4A5568',     // Gray 700
+    patternOpacity: 0.03,  // Subtler pattern in dark mode
+    gradients: {
+      mint: ['#064E3B', '#10B981'] as const, // Deep base highlighting to Emerald
+      lavender: ['#4C1D95', '#8B5CF6'] as const, // Deep base to Violet
+      sky: ['#0C4A6E', '#0EA5E9'] as const, // Deep base to Sky
+      rose: ['#881337', '#F43F5E'] as const, // Deep base to Rose
+      blue: ['#1E3A8A', '#3B82F6'] as const, // Navy base to vibrant Blue
+      pink: ['#831843', '#EC4899'] as const, // Burgundy base to vibrant Pink
+    },
   },
   semantic: {
     success: '#65C387',

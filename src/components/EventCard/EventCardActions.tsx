@@ -6,16 +6,19 @@ import { styles } from './styles';
 import { formatTime, formatTimeSince } from './helpers';
 import { Colors } from '../../theme/colors';
 import { ScalePressable } from '../common/ScalePressable';
+import { ActionSheet, Action } from '../common/ActionSheet';
 
 interface EventCardActionsProps {
   event: Event;
   onTimePress: () => void;
   onDeletePress?: () => void;
   showTimeSince?: boolean;
+  theme: any;
 }
 
-export function EventCardActions({ event, onTimePress, onDeletePress, showTimeSince = true }: EventCardActionsProps) {
+export function EventCardActions({ event, onTimePress, onDeletePress, showTimeSince = true, theme }: EventCardActionsProps) {
   const [currentTime, setCurrentTime] = useState(Date.now());
+  const [showActionSheet, setShowActionSheet] = useState(false);
 
   // Rafraîchissement automatique du temps pour les biberons
   useEffect(() => {
@@ -34,27 +37,49 @@ export function EventCardActions({ event, onTimePress, onDeletePress, showTimeSi
 
   const timeSinceBottle = event.type === 'bottle' ? formatTimeSince(event.at, currentTime) : null;
 
-  return (
-    <View style={styles.rightActions}>
-      <ScalePressable onPress={onTimePress} style={styles.timeContainer}>
-        <Text style={styles.time}>{formatTime(event.at)}</Text>
-        {event.type === 'bottle' && showTimeSince && timeSinceBottle && (
-          <Text style={styles.timeSince}>{timeSinceBottle}</Text>
-        )}
-      </ScalePressable>
+  const actions: Action[] = [
+    {
+      id: 'edit',
+      label: "Modifier l'heure",
+      icon: 'clock-outline',
+      onPress: onTimePress,
+    },
+    ...(onDeletePress ? [{
+      id: 'delete',
+      label: 'Supprimer',
+      icon: 'trash-can-outline' as const,
+      onPress: onDeletePress,
+      destructive: true,
+    }] : []),
+  ];
 
-      {onDeletePress && (
+  return (
+    <>
+      <View style={styles.rightActions}>
+        <View style={styles.timeContainer}>
+          <Text style={[styles.time, { color: theme.colors.textSecondary }]}>{formatTime(event.at)}</Text>
+          {event.type === 'bottle' && showTimeSince && timeSinceBottle && (
+            <Text style={[styles.timeSince, { color: theme.colors.textSecondary }]}>{timeSinceBottle}</Text>
+          )}
+        </View>
+
         <ScalePressable
-          onPress={onDeletePress}
-          style={styles.deleteButton}
+          onPress={() => setShowActionSheet(true)}
+          style={{ padding: 8 }}
         >
           <MaterialCommunityIcons
-            name="trash-can-outline"
+            name="dots-vertical"
             size={22}
-            color={Colors.pastel.rose}
+            color={theme.colors.textSecondary}
           />
         </ScalePressable>
-      )}
-    </View>
+      </View>
+
+      <ActionSheet
+        visible={showActionSheet}
+        onClose={() => setShowActionSheet(false)}
+        actions={actions}
+      />
+    </>
   );
 }

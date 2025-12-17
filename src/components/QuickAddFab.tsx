@@ -1,51 +1,98 @@
-import React, { useState } from 'react';
-import { View, StyleSheet, TouchableWithoutFeedback, Text } from 'react-native';
+import React, { useState, useMemo } from 'react';
+import { View, StyleSheet, TouchableWithoutFeedback } from 'react-native';
 import Animated, {
     useAnimatedStyle,
     useSharedValue,
     withSpring,
-    withTiming,
     interpolate,
     Extrapolate,
-    runOnJS
 } from 'react-native-reanimated';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { Colors } from '../theme/colors';
 import { HapticFeedback } from '../utils/haptics';
 import { BlurView } from 'expo-blur';
+import { useBabyStore } from '../state/useBabyStore';
+import { ServiceType } from '../data/types';
 
 const FAB_SIZE = 64;
 const OPTION_SIZE = 50;
 const RADIUS = 100; // Distance of options from center
 
 interface QuickAddFabProps {
-    onPressOption: (type: 'bottle' | 'sleep' | 'diaper') => void;
+    onPressOption: (type: 'bottle' | 'sleep' | 'diaper' | 'meal' | 'growth' | 'med') => void;
 }
+
+const ALL_OPTIONS: { type: ServiceType; icon: string; color: string }[] = [
+    { type: 'bottle', icon: 'baby-bottle', color: '#4299E1' },
+    { type: 'meal', icon: 'food-apple', color: '#48BB78' },
+    { type: 'sleep', icon: 'sleep', color: '#9F7AEA' },
+    { type: 'diaper', icon: 'emoticon-poop', color: '#ED8936' },
+    { type: 'growth', icon: 'ruler', color: '#ECC94B' },
+    { type: 'med', icon: 'pill', color: '#F56565' },
+];
+
+interface OptionItemProps {
+    icon: string;
+    color: string;
+    type: any;
+    angle: number;
+    animation: Animated.SharedValue<number>;
+    isOpen: boolean;
+    onPress: (type: any) => void;
+}
+
+const OptionItem = ({ icon, color, type, angle, animation, isOpen, onPress }: OptionItemProps) => {
+    const radian = (angle * Math.PI) / 180;
+    const x = RADIUS * Math.cos(radian);
+    const y = RADIUS * Math.sin(radian);
+
+    const optionStyle = useAnimatedStyle(() => {
+        const scale = interpolate(animation.value, [0, 1], [0, 1], Extrapolate.CLAMP);
+        const translateX = interpolate(animation.value, [0, 1], [0, x], Extrapolate.CLAMP);
+        const translateY = interpolate(animation.value, [0, 1], [0, y], Extrapolate.CLAMP);
+
+        return {
+            transform: [
+                { translateX },
+                { translateY },
+                { scale },
+            ],
+            opacity: animation.value,
+        };
+    });
+
+    return (
+        <Animated.View style={[styles.optionContainer, optionStyle, { pointerEvents: isOpen ? 'auto' : 'none' }]}>
+            <TouchableWithoutFeedback onPress={() => onPress(type)}>
+                <View style={[styles.optionButton, { backgroundColor: color }]}>
+                    <MaterialCommunityIcons name={icon as any} size={24} color="#FFF" />
+                </View>
+            </TouchableWithoutFeedback>
+        </Animated.View>
+    );
+};
 
 export function QuickAddFab({ onPressOption }: QuickAddFabProps) {
     const [isOpen, setIsOpen] = useState(false);
     const animation = useSharedValue(0);
+    const { settings } = useBabyStore();
+
+    const activeOptions = useMemo(() => {
+        return ALL_OPTIONS.filter(opt => settings.enabledServices.includes(opt.type));
+    }, [settings.enabledServices]);
 
     const toggleMenu = () => {
-        const toValue = isOpen ? 0 : 1;
-
         HapticFeedback.medium();
+        const nextState = !isOpen;
+        setIsOpen(nextState);
 
-        if (toValue === 1) {
-            setIsOpen(true);
-        }
-
-        animation.value = withSpring(toValue, {
+        animation.value = withSpring(nextState ? 1 : 0, {
             damping: 15,
             stiffness: 120,
-        }, (finished) => {
-            if (finished && toValue === 0) {
-                runOnJS(setIsOpen)(false);
-            }
         });
     };
 
-    const handleOptionPress = (type: 'bottle' | 'sleep' | 'diaper') => {
+    const handleOptionPress = (type: any) => {
         HapticFeedback.selection();
         onPressOption(type);
         toggleMenu();
@@ -67,46 +114,6 @@ export function QuickAddFab({ onPressOption }: QuickAddFabProps) {
         };
     });
 
-    const renderOption = (icon: string, color: string, type: 'bottle' | 'sleep' | 'diaper', angle: number, delay: number) => {
-        // Calculate position based on angle
-        // 0 degrees is right, -90 is up, 180 is left.
-        // We want them effectively at -135 (left-up), -90 (up), -45 (right-up) if placed bottom right.
-        // Assuming FAB is bottom-center for now, or bottom-right? 
-        // Let's place FAB bottom-center. Then angles: -180 (left), -90 (up), 0 (right).
-        // Or better: -150, -90, -30 for a nice arc.
-
-        const radian = (angle * Math.PI) / 180;
-        const x = RADIUS * Math.cos(radian);
-        const y = RADIUS * Math.sin(radian);
-
-        const optionStyle = useAnimatedStyle(() => {
-            const scale = interpolate(animation.value, [0, 1], [0, 1], Extrapolate.CLAMP);
-            const translateX = interpolate(animation.value, [0, 1], [0, x], Extrapolate.CLAMP);
-            const translateY = interpolate(animation.value, [0, 1], [0, y], Extrapolate.CLAMP);
-
-            return {
-                transform: [
-                    { translateX },
-                    { translateY },
-                    { scale },
-                ],
-                opacity: animation.value,
-            };
-        });
-
-        return (
-            <Animated.View style={[styles.optionContainer, optionStyle, { pointerEvents: isOpen ? 'auto' : 'none' }]}>
-                <TouchableWithoutFeedback onPress={() => handleOptionPress(type)}>
-                    <View style={[styles.optionButton, { backgroundColor: color }]}>
-                        <MaterialCommunityIcons name={icon as any} size={24} color="#FFF" />
-                    </View>
-                </TouchableWithoutFeedback>
-                {/* Optional Label */}
-                {/* <Text style={styles.label}>{type}</Text> */}
-            </Animated.View>
-        );
-    };
-
     return (
         <View style={styles.container} pointerEvents="box-none">
             {/* Backdrop for closing */}
@@ -118,9 +125,30 @@ export function QuickAddFab({ onPressOption }: QuickAddFabProps) {
 
             {/* Options Arc (Centered above button) */}
             <View style={styles.optionsWrapper} pointerEvents="box-none">
-                {renderOption('baby-bottle', '#4299E1', 'bottle', -140, 0)}
-                {renderOption('sleep', '#9F7AEA', 'sleep', -90, 0)}
-                {renderOption('emoticon-poop', '#ED8936', 'diaper', -40, 0)}
+                {activeOptions.map((opt, index) => {
+                    // Spread from -165 to -15 (150 degrees span)
+                    // If 1 item: -90
+                    // If >1: start -165, step 150/(count-1)
+
+                    let angle = -90;
+                    if (activeOptions.length > 1) {
+                        const step = 150 / (activeOptions.length - 1);
+                        angle = -165 + (index * step);
+                    }
+
+                    return (
+                        <OptionItem
+                            key={opt.type}
+                            icon={opt.icon}
+                            color={opt.color}
+                            type={opt.type}
+                            angle={angle}
+                            animation={animation}
+                            isOpen={isOpen}
+                            onPress={handleOptionPress}
+                        />
+                    );
+                })}
             </View>
 
             {/* Main FAB */}
@@ -184,17 +212,8 @@ const styles = StyleSheet.create({
         elevation: 4,
     },
     backdrop: {
-        // We will need to layout this backdrop to cover the whole screen
-        // This is tricky inside a localized component. 
-        // For now, we'll just rely on the area around the button or use a portal if needed.
-        // Actually, StyleSheet.absoluteFill only fills the parent. 
-        // If container is absolute bottom, fill will be weird.
-        // Solution: Make the container fill the whole screen only when open?
-        // Or position manually. Simpler: Just rely on click-away on the options area for now.
-        // Or better: Let's remove the backdrop logic from here and just have clear interaction.
-        // Re-adding backdrop logic properly later if needed. 
         backgroundColor: 'rgba(0,0,0,0.2)',
-        top: -1000, // Hack to cover screen upwards
+        top: -1000,
         bottom: -1000,
         left: -1000,
         right: -1000,

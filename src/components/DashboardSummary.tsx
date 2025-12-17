@@ -7,10 +7,36 @@ import { Spacing, BorderRadius, FontSize } from '../theme/spacing';
 import { BottleEvent, SleepEvent, DiaperEvent } from '../data/types';
 import { useBabyStore } from '../state/useBabyStore';
 import { MilkWave } from './animations/MilkWave';
+import { useAppTheme } from '../hooks/useAppTheme';
 
 const { width } = Dimensions.get('window');
 const CARD_WIDTH = width * 0.9; // Wider card for the bento look
 const SPACE_WIDTH = Spacing.md;
+
+// Helper for Age Calculation
+function formatPreciseAge(birthDateTimestamp: number | null | undefined): string {
+  if (!birthDateTimestamp) return '';
+  const birth = new Date(birthDateTimestamp);
+  const now = new Date();
+
+  let years = now.getFullYear() - birth.getFullYear();
+  let months = now.getMonth() - birth.getMonth();
+  let days = now.getDate() - birth.getDate();
+
+  if (days < 0) {
+    months--;
+    // Get days in previous month
+    days += new Date(now.getFullYear(), now.getMonth(), 0).getDate();
+  }
+  if (months < 0) {
+    years--;
+    months += 12;
+  }
+
+  if (years === 0 && months === 0) return `${days} jour${days > 1 ? 's' : ''}`;
+  if (years === 0) return `${months} mois${days > 0 ? ` et ${days}j` : ''}`;
+  return `${years} an${years > 1 ? 's' : ''}${months > 0 ? ` et ${months} mois` : ''}`;
+}
 
 function formatTimeSince(timestamp: number, now: number): string {
   const diff = now - timestamp;
@@ -27,6 +53,7 @@ interface DashboardSummaryProps {
 
 export function DashboardSummary({ selectedBabyId }: DashboardSummaryProps) {
   const { babies, events } = useBabyStore();
+  const theme = useAppTheme();
   const [now, setNow] = useState(Date.now());
 
   useEffect(() => {
@@ -57,6 +84,10 @@ export function DashboardSummary({ selectedBabyId }: DashboardSummaryProps) {
           .filter(e => e.type === 'bottle')
           .sort((a, b) => b.at - a.at)[0] as BottleEvent | undefined;
 
+        const lastMeal = babyEvents
+          .filter(e => e.type === 'meal')
+          .sort((a, b) => b.at - a.at)[0] as any | undefined; // Cast to any for now or MealEvent if imported
+
         const lastSleep = babyEvents
           .filter(e => e.type === 'sleep')
           .sort((a, b) => b.at - a.at)[0] as SleepEvent | undefined;
@@ -66,20 +97,55 @@ export function DashboardSummary({ selectedBabyId }: DashboardSummaryProps) {
           .filter(e => e.type === 'diaper')
           .sort((a, b) => b.at - a.at)[0] as DiaperEvent | undefined;
 
-        // Gradient & Theme determination
-        const gradientColors = baby.gender === 'female' ? Colors.gradients.pink :
-          baby.gender === 'male' ? Colors.gradients.blue :
-            Colors.gradients.mint;
+        // Determine Last Feeding (Bottle or Meal)
+        let lastFeedingVal: { type: 'bottle' | 'meal', at: number, label: string, sub: string, icon: string, color: string, bg: string, borderColor: string } | null = null;
 
-        // Calculate time since last bottle for the wave animation
-        const timeSinceBottle = lastBottle ? (now - lastBottle.at) / 60000 : null;
+        if (lastBottle && (!lastMeal || lastBottle.at >= lastMeal.at)) {
+          lastFeedingVal = {
+            type: 'bottle',
+            at: lastBottle.at,
+            label: 'Dernier biberon',
+            sub: `${lastBottle.ml}ml`,
+            icon: 'baby-bottle',
+            color: '#2B6CB0',
+            bg: '#EBF8FF', // Light blue tint
+            borderColor: '#BEE3F8'
+          };
+        } else if (lastMeal) {
+          const foodLabels: Record<string, string> = {
+            vegetable: 'Légumes', fruit: 'Fruits', protein: 'Protéines', starch: 'Féculents', dairy: 'Laitage', cereal: 'Céréales'
+          };
+          const label = foodLabels[lastMeal.foodType] || 'Repas';
+          lastFeedingVal = {
+            type: 'meal',
+            at: lastMeal.at,
+            label: 'Dernier repas',
+            sub: `${label} ${lastMeal.amount ? `(${lastMeal.amount}g)` : ''}`,
+            icon: 'food-apple',
+            color: '#2F855A',
+            bg: '#F0FFF4', // Light green tint
+            borderColor: '#C6F6D5'
+          };
+        }
+
+        // Gradient & Theme determination
+        const gradientColors = theme.isDark
+          ? (baby.gender === 'female' ? Colors.dark.gradients.pink :
+            baby.gender === 'male' ? Colors.dark.gradients.blue :
+              Colors.dark.gradients.mint)
+          : (baby.gender === 'female' ? Colors.gradients.pink :
+            baby.gender === 'male' ? Colors.gradients.blue :
+              Colors.gradients.mint);
+
+        // Calculate time since last bottle for the wave animation (only if bottle is last feeding)
+        const timeSinceBottle = (lastFeedingVal?.type === 'bottle' && lastBottle) ? (now - lastBottle.at) / 60000 : null;
 
         return (
           <View key={baby.id} style={styles.cardContainer}>
-            <View style={styles.card}>
+            <View style={[styles.card, { backgroundColor: theme.colors.cardBg, borderColor: theme.isDark ? theme.colors.border : '#FFF' }]}>
               {/* Top Section: Avatar & Status */}
               <LinearGradient
-                colors={gradientColors}
+                colors={gradientColors as any} // Cast to any to avoid readonly issues if needed
                 style={styles.heroSection}
                 start={{ x: 0, y: 0 }}
                 end={{ x: 1, y: 1 }}
@@ -98,9 +164,12 @@ export function DashboardSummary({ selectedBabyId }: DashboardSummaryProps) {
                 </View>
 
                 <View style={styles.heroInfo}>
-                  <Text style={styles.greeting}>Bonjour,</Text>
-                  <Text style={styles.name}>{baby.name} !</Text>
-                  <View style={styles.statusPill}>
+                  <Text style={[styles.greeting, { color: Colors.modern.textSecondary }]}>Bonjour,</Text>
+                  <Text style={[styles.name, { color: Colors.modern.text, marginBottom: 2 }]}>{baby.name} !</Text>
+                  {baby.birthDate && (
+                    <Text style={[styles.ageText, { color: Colors.modern.textSecondary }]}>{formatPreciseAge(baby.birthDate)}</Text>
+                  )}
+                  <View style={[styles.statusPill, { marginTop: 6 }]}>
                     <View style={[styles.statusDot, { backgroundColor: isSleeping ? '#A855F7' : '#F6AD55' }]} />
                     <Text style={styles.statusText}>
                       {isSleeping ? 'Fait de beaux rêves' : 'Prêt à jouer'}
@@ -111,49 +180,55 @@ export function DashboardSummary({ selectedBabyId }: DashboardSummaryProps) {
 
               {/* Bento Grid Stats */}
               <View style={styles.bentoGrid}>
-                {/* Large Box: Bottle */}
-                <View style={[styles.bentoBox, styles.bentoLarge]}>
-                  <MilkWave timeSinceMinutes={timeSinceBottle} />
-                  <View style={[styles.iconBubble, { backgroundColor: 'rgba(255,255,255,0.5)' }]}>
-                    <MaterialCommunityIcons name="baby-bottle" size={24} color="#2B6CB0" />
+                {/* Large Box: Feeding (Bottle or Meal) */}
+                <View style={[
+                  styles.bentoBox,
+                  styles.bentoLarge,
+                  lastFeedingVal
+                    ? { backgroundColor: theme.isDark ? theme.colors.background : lastFeedingVal.bg, borderColor: theme.isDark ? theme.colors.border : lastFeedingVal.borderColor }
+                    : { backgroundColor: theme.colors.background, borderColor: theme.colors.border }
+                ]}>
+                  {lastFeedingVal?.type === 'bottle' && <MilkWave timeSinceMinutes={timeSinceBottle} />}
+                  <View style={[styles.iconBubble, { backgroundColor: theme.isDark ? 'rgba(255,255,255,0.1)' : 'rgba(255,255,255,0.5)' }]}>
+                    <MaterialCommunityIcons name={lastFeedingVal?.icon as any || 'baby-bottle'} size={24} color={lastFeedingVal?.color || '#2B6CB0'} />
                   </View>
                   <View>
-                    <Text style={styles.bentoLabel}>Dernier repas</Text>
-                    <Text style={styles.bentoValue}>
-                      {lastBottle ? formatTimeSince(lastBottle.at, now) : '--'}
+                    <Text style={[styles.bentoLabel, { color: theme.colors.textSecondary }]}>{lastFeedingVal?.label || 'Dernier repas'}</Text>
+                    <Text style={[styles.bentoValue, { color: theme.colors.text }]}>
+                      {lastFeedingVal ? formatTimeSince(lastFeedingVal.at, now) : '--'}
                     </Text>
-                    {lastBottle && (
-                      <Text style={styles.bentoSub}>{lastBottle.ml}ml</Text>
+                    {lastFeedingVal && (
+                      <Text style={[styles.bentoSub, { color: theme.colors.textSecondary }]}>{lastFeedingVal.sub}</Text>
                     )}
                   </View>
                 </View>
 
                 {/* Column for Sleep & Diaper */}
                 <View style={styles.bentoColumn}>
-                  <View style={styles.bentoBox}>
+                  <View style={[styles.bentoBox, { backgroundColor: theme.colors.background, borderColor: theme.colors.border }]}>
                     <View style={[styles.iconBubble, { width: 32, height: 32, backgroundColor: Colors.gradients.lavender[0] }]}>
                       <MaterialCommunityIcons name="sleep" size={18} color="#9F7AEA" />
                     </View>
                     <View style={{ flex: 1, marginLeft: 10 }}>
-                      <Text style={styles.bentoLabelSmall}>Dodo</Text>
-                      <Text style={styles.bentoValueSmall}>
+                      <Text style={[styles.bentoLabelSmall, { color: theme.colors.textSecondary }]}>Dodo</Text>
+                      <Text style={[styles.bentoValueSmall, { color: theme.colors.text, fontSize: 13 }]}>
                         {isSleeping
-                          ? 'Depuis ' + formatTimeSince(lastSleep!.startAt || lastSleep!.at, now)
+                          ? `Dort depuis ${formatTimeSince(lastSleep!.startAt || lastSleep!.at, now)}`
                           : lastSleep?.endAt
-                            ? formatTimeSince(lastSleep.endAt, now)
+                            ? `A dormi ${formatTimeSince(lastSleep!.startAt || lastSleep!.at, lastSleep.endAt)} (il y a ${formatTimeSince(lastSleep.endAt, now)})`.replace(' min', 'm')
                             : '--'
                         }
                       </Text>
                     </View>
                   </View>
 
-                  <View style={styles.bentoBox}>
+                  <View style={[styles.bentoBox, { backgroundColor: theme.colors.background, borderColor: theme.colors.border }]}>
                     <View style={[styles.iconBubble, { width: 32, height: 32, backgroundColor: Colors.gradients.rose[0] }]}>
                       <MaterialCommunityIcons name="emoticon-poop" size={18} color="#ED8936" />
                     </View>
                     <View style={{ flex: 1, marginLeft: 10 }}>
-                      <Text style={styles.bentoLabelSmall}>Couche</Text>
-                      <Text style={styles.bentoValueSmall}>
+                      <Text style={[styles.bentoLabelSmall, { color: theme.colors.textSecondary }]}>Couche</Text>
+                      <Text style={[styles.bentoValueSmall, { color: theme.colors.text }]}>
                         {lastDiaper ? formatTimeSince(lastDiaper.at, now) : '--'}
                       </Text>
                     </View>
@@ -244,6 +319,12 @@ const styles = StyleSheet.create({
     letterSpacing: -0.5,
     marginBottom: 6,
   },
+  ageText: {
+    fontSize: 14,
+    color: Colors.modern.textSecondary,
+    fontWeight: '500',
+    opacity: 0.9,
+  },
   statusPill: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -269,6 +350,7 @@ const styles = StyleSheet.create({
     padding: Spacing.lg,
     paddingTop: 0, // Pull up closer to Hero
     gap: Spacing.md,
+    marginTop: Spacing.md,
   },
   bentoBox: {
     backgroundColor: '#FAFAFA', // Slightly different from surface

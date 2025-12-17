@@ -7,38 +7,19 @@ import { Spacing, BorderRadius, FontSize } from '../../src/theme/spacing';
 import { ScalePressable } from '../../src/components/common/ScalePressable';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { HapticFeedback } from '../../src/utils/haptics';
-
 import { useAppTheme } from '../../src/hooks/useAppTheme';
 
-export default function QuickBottleModal() {
+export default function QuickDiaperModal() {
     const router = useRouter();
     const params = useLocalSearchParams();
-    const { babies, events, addEvent } = useBabyStore();
+    const { babies, addEvent } = useBabyStore();
     const theme = useAppTheme();
 
     const [step, setStep] = useState<'baby' | 'details'>('baby');
     const [selectedBabyId, setSelectedBabyId] = useState<string>((params.babyId as string) || '');
-
-    // Bottle details
-    const [amount, setAmount] = useState<number>(120);
-    const [kind, setKind] = useState<'formula' | 'breastmilk' | 'mixed'>('formula');
-
-    // Load last bottle details when a baby is selected
-    useEffect(() => {
-        if (!selectedBabyId) return;
-
-        const babyEvents = events.filter(e => e.babyId === selectedBabyId && e.type === 'bottle');
-        // Sort by most recent
-        const lastBottle = babyEvents.sort((a, b) => b.at - a.at)[0] as any;
-
-        if (lastBottle) {
-            if (lastBottle.ml) setAmount(lastBottle.ml);
-            if (lastBottle.kind) setKind(lastBottle.kind);
-        }
-    }, [selectedBabyId, events]);
+    const [kind, setKind] = useState<'wet' | 'dirty' | 'both'>('wet');
 
     useEffect(() => {
-        // If we have a babyId passed in, or only one baby exists, skip selection
         if (params.babyId || babies.length === 1) {
             if (!selectedBabyId && babies.length === 1) {
                 setSelectedBabyId(babies[0].id);
@@ -53,20 +34,14 @@ export default function QuickBottleModal() {
         setStep('details');
     };
 
-    const adjustAmount = (delta: number) => {
-        HapticFeedback.light();
-        setAmount(prev => Math.max(0, prev + delta));
-    };
-
     const handleSave = () => {
-        if (!selectedBabyId || amount <= 0) return;
+        if (!selectedBabyId) return;
         HapticFeedback.success();
 
         addEvent({
             babyId: selectedBabyId,
-            type: 'bottle',
+            type: 'diaper',
             at: Date.now(),
-            ml: amount,
             kind: kind,
         } as any);
 
@@ -75,7 +50,7 @@ export default function QuickBottleModal() {
 
     const renderBabySelection = () => (
         <View style={styles.stepContainer}>
-            <Text style={[styles.title, { color: theme.colors.text }]}>Qui a faim ? 🍼</Text>
+            <Text style={[styles.title, { color: theme.colors.text }]}>Qui a besoin d'être changé ? 👶</Text>
             <View style={styles.babiesGrid}>
                 {babies.map((baby) => (
                     <ScalePressable
@@ -95,40 +70,10 @@ export default function QuickBottleModal() {
 
     const renderDetails = () => (
         <View style={styles.stepContainer}>
-            <Text style={[styles.title, { color: theme.colors.text }]}>Quantité ?</Text>
+            <Text style={[styles.title, { color: theme.colors.text }]}>Quoi de neuf ?</Text>
 
-            <View style={styles.amountContainer}>
-                <ScalePressable onPress={() => adjustAmount(-10)} style={[styles.adjustButton, { backgroundColor: theme.isDark ? theme.colors.surface : Colors.neutral.lightGray }]}>
-                    <MaterialCommunityIcons name="minus" size={32} color={theme.colors.text} />
-                </ScalePressable>
-
-                <View style={styles.amountDisplay}>
-                    <Text style={styles.amountText}>{amount}</Text>
-                    <Text style={[styles.unitText, { color: theme.colors.textSecondary }]}>ml</Text>
-                </View>
-
-                <ScalePressable onPress={() => adjustAmount(10)} style={[styles.adjustButton, { backgroundColor: theme.isDark ? theme.colors.surface : Colors.neutral.lightGray }]}>
-                    <MaterialCommunityIcons name="plus" size={32} color={theme.colors.text} />
-                </ScalePressable>
-            </View>
-
-            <View style={styles.shortcuts}>
-                {[60, 90, 120, 150, 180, 210].map(val => (
-                    <ScalePressable
-                        key={val}
-                        onPress={() => {
-                            HapticFeedback.selection();
-                            setAmount(val);
-                        }}
-                        style={[styles.shortcutChip, amount === val ? styles.shortcutChipActive : { backgroundColor: theme.isDark ? theme.colors.surface : Colors.neutral.lightGray }]}
-                    >
-                        <Text style={[styles.shortcutText, amount === val ? styles.shortcutTextActive : { color: theme.colors.text }]}>{val}</Text>
-                    </ScalePressable>
-                ))}
-            </View>
-
-            <View style={styles.kindSelector}>
-                {(['formula', 'breastmilk', 'mixed'] as const).map(k => (
+            <View style={styles.kindSelectorVertical}>
+                {(['wet', 'dirty', 'both'] as const).map(k => (
                     <ScalePressable
                         key={k}
                         onPress={() => {
@@ -136,16 +81,25 @@ export default function QuickBottleModal() {
                             setKind(k);
                         }}
                         style={[
-                            styles.kindOption,
-                            kind === k ? styles.kindOptionActive : { backgroundColor: theme.colors.cardBg, borderColor: theme.colors.border }
+                            styles.kindCard,
+                            kind === k ? styles.kindCardActive : { backgroundColor: theme.colors.cardBg, borderColor: theme.colors.border }
                         ]}
                     >
-                        <Text style={[
-                            styles.kindText,
-                            kind === k ? styles.kindTextActive : { color: theme.colors.textSecondary }
-                        ]}>
-                            {k === 'formula' ? '🥣 Poudre' : k === 'breastmilk' ? '🤱 Maternel' : '🔄 Mixte'}
+                        <Text style={styles.kindEmoji}>
+                            {k === 'wet' ? '💧' : k === 'dirty' ? '💩' : '🔄'}
                         </Text>
+                        <Text style={[
+                            styles.kindCardText,
+                            kind === k ? styles.kindCardTextActive : { color: theme.colors.text }
+                        ]}>
+                            {k === 'wet' ? 'Pipi' : k === 'dirty' ? 'Caca' : 'Les deux'}
+                        </Text>
+                        {/* Indicateur visuel pour choix actif */}
+                        {kind === k && (
+                            <View style={styles.checkIcon}>
+                                <MaterialCommunityIcons name="check-circle" size={24} color={Colors.pastel.mintActive} />
+                            </View>
+                        )}
                     </ScalePressable>
                 ))}
             </View>
@@ -224,87 +178,44 @@ const styles = StyleSheet.create({
         fontWeight: '600',
         color: Colors.neutral.charcoal,
     },
-    amountContainer: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        marginBottom: Spacing.xl,
-        gap: Spacing.lg,
-    },
-    adjustButton: {
-        width: 60,
-        height: 60,
-        borderRadius: 30,
-        backgroundColor: Colors.neutral.lightGray,
-        justifyContent: 'center',
-        alignItems: 'center',
-    },
-    amountDisplay: {
-        alignItems: 'center',
-        minWidth: 120,
-    },
-    amountText: {
-        fontSize: 64,
-        fontWeight: 'bold',
-        color: Colors.pastel.sky,
-    },
-    unitText: {
-        fontSize: FontSize.xl,
-        color: Colors.neutral.darkGray,
-        marginTop: -10,
-    },
-    shortcuts: {
-        flexDirection: 'row',
-        flexWrap: 'wrap',
-        justifyContent: 'center',
-        gap: Spacing.md,
-        marginBottom: Spacing.xl,
-    },
-    shortcutChip: {
-        paddingVertical: Spacing.sm,
-        paddingHorizontal: Spacing.md,
-        borderRadius: BorderRadius.full,
-        backgroundColor: Colors.neutral.lightGray,
-    },
-    shortcutChipActive: {
-        backgroundColor: Colors.pastel.sky,
-    },
-    shortcutText: {
-        fontSize: FontSize.md,
-        fontWeight: '600',
-        color: Colors.neutral.charcoal,
-    },
-    shortcutTextActive: {
-        color: Colors.neutral.white,
-    },
-    kindSelector: {
-        flexDirection: 'row',
+    kindSelectorVertical: {
+        width: '100%',
         gap: Spacing.md,
         marginBottom: Spacing.xxl,
     },
-    kindOption: {
-        paddingVertical: Spacing.md,
-        paddingHorizontal: Spacing.lg,
-        borderRadius: BorderRadius.md,
-        borderWidth: 1,
-        borderColor: Colors.neutral.gray,
+    kindCard: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        padding: Spacing.lg,
+        borderRadius: BorderRadius.xl,
+        borderWidth: 2,
+        borderColor: Colors.neutral.lightGray,
         backgroundColor: Colors.neutral.white,
     },
-    kindOptionActive: {
-        borderColor: Colors.pastel.sky,
-        backgroundColor: Colors.pastel.sky + '20',
+    kindCardActive: {
+        borderColor: Colors.pastel.mintActive,
+        backgroundColor: Colors.pastel.mint + '20',
     },
-    kindText: {
-        fontSize: FontSize.md,
-        fontWeight: '500',
-        color: Colors.neutral.darkGray,
+    kindEmoji: {
+        fontSize: 32,
+        marginRight: Spacing.lg,
     },
-    kindTextActive: {
-        color: Colors.pastel.skyActive,
+    kindCardText: {
+        fontSize: FontSize.xl,
+        fontWeight: '600',
+        color: Colors.neutral.charcoal,
+        flex: 1,
+    },
+    kindCardTextActive: {
+        color: Colors.pastel.mintActive,
         fontWeight: '700',
+    },
+    checkIcon: {
+        marginLeft: 'auto',
     },
     saveButton: {
         width: '100%',
-        backgroundColor: Colors.pastel.skyActive,
+        backgroundColor: Colors.pastel.mintActive,
         paddingVertical: Spacing.lg,
         borderRadius: BorderRadius.xl,
         alignItems: 'center',

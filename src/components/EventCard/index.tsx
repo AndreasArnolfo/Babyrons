@@ -10,6 +10,7 @@ import { EventCardActions } from './EventCardActions';
 import { EditTimeModal } from './EditTimeModal';
 import { DeleteConfirmModal } from './DeleteConfirmModal';
 import { EndSleepModal } from './EndSleepModal';
+import { useAppTheme } from '../../hooks/useAppTheme';
 
 interface EventCardProps {
   event: Event;
@@ -21,49 +22,15 @@ interface EventCardProps {
 
 export function EventCard({ event, babyName, onDelete, showTimeSince = true }: EventCardProps) {
   const { updateEvent } = useBabyStore();
-  
+  const theme = useAppTheme();
+
   const [isEditingTime, setIsEditingTime] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [showEndSleepModal, setShowEndSleepModal] = useState(false);
 
   const handleSaveTime = (newTimestamp: number) => {
-    // Pour les événements de sommeil, mettre à jour aussi startAt si nécessaire
-    if (event.type === 'sleep') {
-      const sleepEvent = event as SleepEvent;
-      const updates: Partial<SleepEvent> = { at: newTimestamp };
-      if (sleepEvent.startAt && sleepEvent.startAt === event.at) {
-        updates.startAt = newTimestamp;
-      }
-      updateEvent(event.id, updates);
-    } else {
-      updateEvent(event.id, { at: newTimestamp });
-    }
-    
+    updateEvent(event.id, { at: newTimestamp });
     setIsEditingTime(false);
-  };
-
-  const handleSaveEndSleep = (endTime: number) => {
-    const sleepEvent = event as SleepEvent;
-    const startTime = sleepEvent.startAt || event.at;
-    
-    // Vérifier que l'heure de fin est après l'heure de début
-    if (endTime <= startTime) {
-      // Utiliser l'heure actuelle si l'heure saisie est invalide
-      const correctedEndTime = Date.now();
-      const duration = correctedEndTime - startTime;
-      updateEvent(event.id, {
-        endAt: correctedEndTime,
-        duration,
-      });
-    } else {
-      const duration = endTime - startTime;
-      updateEvent(event.id, {
-        endAt: endTime,
-        duration,
-      });
-    }
-    
-    setShowEndSleepModal(false);
   };
 
   const handleConfirmDelete = () => {
@@ -73,19 +40,26 @@ export function EventCard({ event, babyName, onDelete, showTimeSince = true }: E
     setShowDeleteConfirm(false);
   };
 
+  const handleSaveEndSleep = (endAt: number) => {
+    updateEvent(event.id, { endAt });
+    setShowEndSleepModal(false);
+  };
+
   return (
     <>
-      <View style={styles.container}>
-        <EventCardContent 
-          event={event} 
-          babyName={babyName} 
-          onEndSleep={() => setShowEndSleepModal(true)} 
+      <View style={[styles.container, { backgroundColor: theme.colors.cardBg, borderColor: theme.colors.border, borderWidth: theme.isDark ? 1 : 0 }]}>
+        <EventCardContent
+          event={event}
+          babyName={babyName}
+          onEndSleep={() => setShowEndSleepModal(true)}
+          theme={theme}
         />
-        <EventCardActions 
-          event={event} 
+        <EventCardActions
+          event={event}
           onTimePress={() => setIsEditingTime(true)}
           onDeletePress={onDelete ? () => setShowDeleteConfirm(true) : undefined}
           showTimeSince={showTimeSince}
+          theme={theme}
         />
       </View>
 

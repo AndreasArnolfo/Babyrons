@@ -1,4 +1,4 @@
-export type ServiceType = "bottle" | "sleep" | "med" | "diaper" | "growth";
+export type ServiceType = "bottle" | "sleep" | "med" | "diaper" | "growth" | "meal";
 
 export interface Baby {
   id: string;
@@ -56,10 +56,20 @@ export interface GrowthEvent extends BaseEvent {
   headCircumferenceCm?: number;
 }
 
-export type Event = BottleEvent | SleepEvent | MedEvent | DiaperEvent | GrowthEvent;
+export interface MealEvent extends BaseEvent {
+  type: 'meal';
+  foodType: 'vegetable' | 'fruit' | 'protein' | 'starch' | 'dairy' | 'cereal';
+  texture?: 'smooth' | 'mashed' | 'pieces';
+  amount?: number; // optionally in grams
+  note?: string; // name of the food (e.g., "Carrot")
+}
+
+export type Event = BottleEvent | SleepEvent | MedEvent | DiaperEvent | GrowthEvent | MealEvent;
 
 export interface AppSettings {
   enabledServices: ServiceType[];
   theme: "light" | "dark" | "pastel";
+  themeMode: 'auto' | 'light' | 'dark';
   isPro: boolean;
+  notificationsEnabled?: boolean;
 }

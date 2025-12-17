@@ -2,11 +2,16 @@ import { DarkTheme, DefaultTheme, ThemeProvider } from '@react-navigation/native
 import { Stack, useRouter, useSegments } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { useEffect } from 'react';
-import { View, ActivityIndicator } from 'react-native';
+import { View, ActivityIndicator, LogBox } from 'react-native';
 import * as Linking from 'expo-linking';
 import 'react-native-reanimated';
 import { useSupabaseAuth } from '../src/hooks/useSupabaseAuth';
 import { Colors } from '../src/theme/colors';
+
+// Ignorer les avertissements spécifiques à Expo Go pour les notifications push (qui ne marchent pas en Go mais on utilise le local)
+LogBox.ignoreLogs([
+  'expo-notifications: Android Push notifications (remote notifications) functionality provided by expo-notifications was removed',
+]);
 
 export const unstable_settings = {
   anchor: '(tabs)',
@@ -18,6 +23,11 @@ export default function RootLayout() {
   const router = useRouter();
 
   useEffect(() => {
+    // Demander les permissions de notification au lancement
+    import('../src/utils/notifications').then(({ registerForPushNotificationsAsync }) => {
+      registerForPushNotificationsAsync();
+    });
+
     if (loading) return;
     const root = segments[0] as string | undefined;
     // Si non connecté et on tente d'aller dans les tabs -> rediriger vers login
@@ -49,7 +59,7 @@ export default function RootLayout() {
   useEffect(() => {
     const handleDeepLink = async (event: { url: string }) => {
       const { url } = event;
-      
+
       // Vérifier si c'est un lien de réinitialisation
       if (url.includes('reset-password') || url.includes('type=recovery')) {
         // Attendre un peu pour que Supabase traite les tokens
@@ -90,19 +100,19 @@ export default function RootLayout() {
         <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
         <Stack.Screen name="login" options={{ headerShown: false }} />
         <Stack.Screen name="reset-password" options={{ headerShown: false }} />
-        <Stack.Screen 
-          name="modals/add-event" 
-          options={{ 
+        <Stack.Screen
+          name="modals/add-event"
+          options={{
             presentation: 'modal',
             headerShown: false,
-          }} 
+          }}
         />
-        <Stack.Screen 
-          name="modals/manage-baby" 
-          options={{ 
+        <Stack.Screen
+          name="modals/manage-baby"
+          options={{
             presentation: 'modal',
             headerShown: false,
-          }} 
+          }}
         />
       </Stack>
       <StatusBar style="auto" />

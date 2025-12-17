@@ -4,6 +4,7 @@ import { Baby } from "../data/types";
 import { Colors } from "../theme/colors";
 import { Spacing, BorderRadius, FontSize } from "../theme/spacing";
 import { ScalePressable } from "./common/ScalePressable";
+import { useAppTheme } from "../hooks/useAppTheme";
 
 interface BabyCardProps {
   baby: Baby;
@@ -12,6 +13,7 @@ interface BabyCardProps {
 }
 
 export function BabyCard({ baby, onPress, isSelected = false }: BabyCardProps) {
+  const theme = useAppTheme();
   const defaultImage = require("../../assets/images/baby-placeholder.png");
   const defaultImageM = require("../../assets/images/baby_placeholder_m.png");
   const defaultImageF = require("../../assets/images/baby_placeholder_f.png");
@@ -37,7 +39,10 @@ export function BabyCard({ baby, onPress, isSelected = false }: BabyCardProps) {
       onPress={onPress}
       style={[
         styles.card,
-        { borderColor: baby.color || Colors.pastel.rose },
+        {
+          borderColor: baby.color || Colors.pastel.rose,
+          backgroundColor: theme.colors.cardBg
+        },
         isSelected && styles.selected,
       ]}
     >
@@ -49,7 +54,7 @@ export function BabyCard({ baby, onPress, isSelected = false }: BabyCardProps) {
         />
       </View>
 
-      <Text style={styles.name}>{babyName}</Text>
+      <Text style={[styles.name, { color: theme.colors.text }]}>{babyName}</Text>
     </ScalePressable>
   );
 }

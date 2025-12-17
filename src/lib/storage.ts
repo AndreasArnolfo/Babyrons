@@ -1,13 +1,15 @@
-import { MMKV } from 'react-native-mmkv';
+import { Share } from 'react-native';
 
-let storage: MMKV | null = null;
+let storage: any = null;
 
 try {
+  // Use require to avoid top-level import crash if module is missing or native code is not linked
+  const { MMKV } = require('react-native-mmkv');
   storage = new MMKV({
     id: 'babyrons-storage',
   });
 } catch (error) {
-  console.warn('MMKV failed to initialize:', error);
+  console.warn('MMKV failed to initialize (falling back to in-memory/no-persistence):', error);
 }
 
 export const StorageKeys = {

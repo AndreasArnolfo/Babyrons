@@ -35,7 +35,7 @@ export function formatTimeSince(eventTimestamp: number, currentTime: number = Da
   const diffMs = currentTime - eventTimestamp;
   const diffHours = Math.floor(diffMs / 3600000);
   const diffMinutes = Math.floor((diffMs % 3600000) / 60000);
-  
+
   if (diffHours > 0) {
     return `Il y a ${diffHours}h${diffMinutes > 0 ? `${diffMinutes}min` : ''}`;
   }
@@ -49,23 +49,43 @@ export function getEventIcon(type: string): keyof typeof MaterialCommunityIcons.
     case 'med': return 'pill';
     case 'diaper': return 'emoticon-poop';
     case 'growth': return 'human-male-height';
+    case 'meal': return 'food-apple';
     default: return 'circle';
   }
 }
 
 export function getEventColor(type: string): string {
   switch (type) {
-    case 'bottle': return Colors.pastel.sky; // Bleu pour le lait
-    case 'sleep': return Colors.pastel.lavender; // Violet pour la nuit
-    case 'med': return Colors.pastel.rose; // Rose pour les médicaments
-    case 'diaper': return '#D4A574'; // Marron clair pour les couches
-    case 'growth': return Colors.pastel.mintActive; // Vert pour la croissance
+    case 'bottle': return Colors.pastel.sky;
+    case 'sleep': return Colors.pastel.lavender;
+    case 'med': return Colors.pastel.rose;
+    case 'diaper': return '#D4A574';
+    case 'growth': return Colors.pastel.mintActive;
+    case 'meal': return Colors.pastel.mintActive; // Vert pour la nourriture saine
     default: return Colors.neutral.darkGray;
   }
 }
 
 export function getEventDetails(event: Event): string {
   switch (event.type) {
+    case 'meal':
+      const meal = event as any; // Cast safely or use MealEvent import
+      const foodLabels: Record<string, string> = {
+        vegetable: 'Légumes',
+        fruit: 'Fruits',
+        protein: 'Protéines',
+        starch: 'Féculents',
+        dairy: 'Laitage',
+        cereal: 'Céréales',
+      };
+      const typeLabel = foodLabels[meal.foodType] || meal.foodType;
+      const details = [];
+      if (typeLabel) details.push(typeLabel);
+      if (meal.note) details.push(meal.note);
+      if (meal.amount) details.push(`${meal.amount}g`);
+
+      return details.join(' • ');
+
     case 'bottle':
       const bottle = event as BottleEvent;
       const kindLabels = {
@@ -75,7 +95,7 @@ export function getEventDetails(event: Event): string {
       };
       const kindLabel = bottle.kind ? ` (${kindLabels[bottle.kind]})` : '';
       return `${bottle.ml} ml${kindLabel}`;
-    
+
     case 'sleep':
       const sleepEvent = event as SleepEvent;
       if (sleepEvent.duration) {
@@ -87,7 +107,7 @@ export function getEventDetails(event: Event): string {
         return `${minutes} min`;
       }
       return 'En cours';
-    
+
     case 'med':
       const medEvent = event as MedEvent;
       let medDetails = medEvent.name;
@@ -95,7 +115,7 @@ export function getEventDetails(event: Event): string {
         medDetails += ` - ${medEvent.dose}`;
       }
       return medDetails;
-    
+
     case 'diaper':
       const diaperEvent = event as DiaperEvent;
       const diaperLabels = {
@@ -104,7 +124,7 @@ export function getEventDetails(event: Event): string {
         both: 'Les deux',
       };
       return diaperLabels[diaperEvent.kind] || diaperEvent.kind;
-    
+
     case 'growth':
       const growth = event as GrowthEvent;
       const parts: string[] = [];
@@ -112,7 +132,7 @@ export function getEventDetails(event: Event): string {
       if (growth.heightCm) parts.push(`${growth.heightCm} cm`);
       if (growth.headCircumferenceCm) parts.push(`PC: ${growth.headCircumferenceCm} cm`);
       return parts.join(' • ') || 'Mesures';
-    
+
     default:
       return '';
   }
@@ -125,31 +145,34 @@ export function getEventTypeLabel(type: string): string {
     case 'med': return 'médicament';
     case 'diaper': return 'couche';
     case 'growth': return 'mesure de croissance';
+    case 'meal': return 'repas';
     default: return 'événement';
   }
 }
 
 export function getDeleteMessage(event: Event, babyName: string): string {
-  const eventTypeLabel = getEventTypeLabel(event.type);
   const eventDetails = getEventDetails(event);
   const eventTime = formatTime(event.at);
-  
+
   switch (event.type) {
     case 'bottle':
       return `Supprimer le biberon de ${eventDetails} de ${babyName} à ${eventTime} ?`;
-    
+
     case 'sleep':
       return `Supprimer la sieste de ${eventDetails} de ${babyName} à ${eventTime} ?`;
-    
+
     case 'med':
       return `Supprimer le médicament "${eventDetails}" de ${babyName} à ${eventTime} ?`;
-    
+
     case 'diaper':
       return `Supprimer la couche ${eventDetails.toLowerCase()} de ${babyName} à ${eventTime} ?`;
-    
+
     case 'growth':
       return `Supprimer la mesure de croissance (${eventDetails}) de ${babyName} à ${eventTime} ?`;
-    
+
+    case 'meal':
+      return `Supprimer le repas (${eventDetails}) de ${babyName} à ${eventTime} ?`;
+
     default:
       return `Supprimer l'événement de ${babyName} à ${eventTime} ?`;
   }

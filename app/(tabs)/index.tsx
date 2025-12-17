@@ -8,7 +8,6 @@ import { DashboardSummary } from "../../src/components/DashboardSummary";
 import { PatternBackground } from "../../src/components/PatternBackground";
 import { Colors } from "../../src/theme/colors";
 import { Spacing, BorderRadius, FontSize } from "../../src/theme/spacing";
-import { getSupabase } from '@/src/utils/supabase';
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useRealtimeEvents } from "@/src/hooks/useRealtimeEvents";
 import { useRealtimeBabies } from "@/src/hooks/useRealtimeBabies";
@@ -16,14 +15,7 @@ import { CuteEmptyState } from "../../src/components/common/CuteEmptyState";
 import { ScalePressable } from "../../src/components/common/ScalePressable";
 import { FadeInEntry } from "../../src/components/common/FadeInEntry";
 import { QuickAddFab } from "../../src/components/QuickAddFab";
-
-function formatDisplayNameFromEmail(email: string): string {
-  if (!email) return "";
-  const namePart = email.split("@")[0];
-  const words = namePart.replace(/[0-9]/g, "").replace(/\./g, " ").split(" ").filter((w) => w.trim() !== "");
-  const formatted = words.map((word) => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase()).join(" ");
-  return formatted;
-}
+import { useAppTheme } from "../../src/hooks/useAppTheme";
 
 export default function Index() {
   useRealtimeEvents();
@@ -32,6 +24,7 @@ export default function Index() {
   const router = useRouter();
   const { babies, events } = useBabyStore();
   const [selectedBabyId, setSelectedBabyId] = useState<string | null>(null);
+  const theme = useAppTheme();
 
   const filteredEvents = useMemo(() => {
     return selectedBabyId
@@ -67,33 +60,15 @@ export default function Index() {
     useBabyStore.getState().removeEvent(eventId);
   };
 
-  const [displayName, setDisplayName] = useState<string>("");
-  useEffect(() => {
-    (async () => {
-      const supabase = getSupabase();
-      if (!supabase) return;
-      try {
-        const { data: userData } = await supabase.auth.getUser();
-        const email = userData?.user?.email || "";
-        const formattedName = formatDisplayNameFromEmail(email);
-        setDisplayName(formattedName || "Utilisateur Babyrons");
-      } catch (err) {
-        console.error("Erreur Supabase:", err);
-        setDisplayName("Utilisateur Babyrons");
-      }
-    })();
-  }, []);
-
   const logo = require("../../assets/images/logo-babyrons.png");
   const insets = useSafeAreaInsets();
 
   return (
     <PatternBackground>
       <ScrollView style={styles.container}>
-        <View style={[styles.headerContainer, { paddingTop: insets.top }]} />
+        <View style={{ paddingTop: insets.top }} />
         <View style={styles.headerContainer}>
-          <View style={styles.header}>
-            <Text style={styles.greeting}>Bonjour {displayName} !</Text>
+          <View style={styles.brandContainer}>
             <Image source={logo} style={styles.logo} resizeMode="contain" />
           </View>
         </View>
@@ -102,7 +77,7 @@ export default function Index() {
 
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>Vos bébés</Text>
+            <Text style={[styles.sectionTitle, { color: theme.colors.text }]}>Vos bébés</Text>
             <ScalePressable onPress={() => router.push('/modals/manage-baby')}>
               <Text style={styles.manageButton}>Gérer</Text>
             </ScalePressable>
@@ -135,7 +110,7 @@ export default function Index() {
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
             <View style={styles.sectionTitleContainer}>
-              <Text style={styles.sectionTitle}>
+              <Text style={[styles.sectionTitle, { color: theme.colors.text }]}>
                 {selectedBabyId
                   ? `Événements - ${babies.find(b => b.id === selectedBabyId)?.name || 'Bébé'}`
                   : 'Événements récents'
@@ -192,6 +167,31 @@ export default function Index() {
               pathname: '/modals/quick-bottle',
               params: { babyId: selectedBabyId || '' }
             });
+          } else if (type === 'diaper') {
+            router.push({
+              pathname: '/modals/quick-diaper',
+              params: { babyId: selectedBabyId || '' }
+            });
+          } else if (type === 'sleep') {
+            router.push({
+              pathname: '/modals/quick-sleep',
+              params: { babyId: selectedBabyId || '' }
+            });
+          } else if (type === 'meal') {
+            router.push({
+              pathname: '/modals/quick-meal',
+              params: { babyId: selectedBabyId || '' }
+            });
+          } else if (type === 'growth') {
+            router.push({
+              pathname: '/modals/quick-growth',
+              params: { babyId: selectedBabyId || '' }
+            });
+          } else if (type === 'med') {
+            router.push({
+              pathname: '/modals/quick-med',
+              params: { babyId: selectedBabyId || '' }
+            });
           } else {
             router.push({
               pathname: '/modals/add-event',
@@ -221,32 +221,21 @@ const styles = StyleSheet.create({
     backgroundColor: 'transparent',
   },
   headerContainer: {
-    backgroundColor: "#D6FFD4",
+    paddingHorizontal: Spacing.lg,
+    paddingVertical: Spacing.md,
+    backgroundColor: 'transparent', // Transparent to let pattern show OR 'rgba(255,255,255,0.8)' for glass
+    alignItems: 'center',
+    justifyContent: 'center',
   },
-  header: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    backgroundColor: "#D6FFD4", // 💚 vert pastel doux
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    borderBottomLeftRadius: 20, // arrondis doux
-    borderBottomRightRadius: 20,
-    shadowColor: "#000",
-    shadowOpacity: 0.05,
-    shadowOffset: { width: 0, height: 3 },
-    shadowRadius: 4,
-    elevation: 2, // effet subtil sur Android
+  brandContainer: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 4,
   },
-  greeting: {
-    fontSize: 22,
-    fontWeight: "700",
-    color: "#2C3E50",
-  },
-  title: {
-    fontSize: FontSize.xxl,
-    fontWeight: "bold",
-    color: Colors.neutral.charcoal,
+  logo: {
+    width: 260,
+    height: 180,
+    tintColor: undefined,
   },
   section: {
     padding: Spacing.lg,
@@ -308,11 +297,5 @@ const styles = StyleSheet.create({
     alignSelf: "center",
     marginVertical: Spacing.lg,
     backgroundColor: Colors.neutral.white,
-  },
-  logo: {
-    width: 60,
-    height: 60,
-    tintColor: undefined,
-    backgroundColor: "transparent",
   },
 });

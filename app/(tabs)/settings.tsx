@@ -7,9 +7,11 @@ import { PatternBackground } from "../../src/components/PatternBackground";
 import { Colors } from "../../src/theme/colors";
 import { Spacing, BorderRadius, FontSize } from "../../src/theme/spacing";
 import { exportDataToPDF } from "../../src/lib/pdfExport";
+import { useAppTheme } from "../../src/hooks/useAppTheme";
 
 const serviceLabels: Record<ServiceType, string> = {
   bottle: "🍼 Biberons",
+  meal: "🍽️ Repas",
   sleep: "😴 Sommeil",
   med: "💊 Médicaments",
   diaper: "👶 Couches",
@@ -19,6 +21,7 @@ const serviceLabels: Record<ServiceType, string> = {
 export default function Settings() {
   const { settings, toggleService, updateSettings, babies, events } = useBabyStore();
   const { session, signOut } = useSupabaseAuth();
+  const theme = useAppTheme();
   const [isExporting, setIsExporting] = useState(false);
   const [selectedBabyIds, setSelectedBabyIds] = useState<Set<string>>(new Set(babies.map(b => b.id)));
 
@@ -59,6 +62,10 @@ export default function Settings() {
     setSelectedBabyIds(new Set());
   };
 
+
+
+
+
   const handleExportPDF = async () => {
     if (selectedBabyIds.size === 0) {
       Alert.alert(
@@ -94,125 +101,194 @@ export default function Settings() {
   return (
     <PatternBackground>
       <View style={styles.container}>
-        <View style={styles.header}>
-        <Text style={styles.title}>Réglages</Text>
-        <Text style={styles.subtitle}>Personnalisez votre expérience</Text>
-      </View>
+        <View style={[styles.header, { backgroundColor: theme.isDark ? theme.colors.surface : Colors.pastel.rose }]}>
+          <Text style={[styles.title, { color: theme.colors.text }]}>Réglages</Text>
+          <Text style={[styles.subtitle, { color: theme.colors.textSecondary }]}>Personnalisez votre expérience</Text>
+        </View>
 
-      <ScrollView style={styles.content}>
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Services actifs</Text>
-          <Text style={styles.sectionDescription}>
-            Activez ou désactivez les types d'événements que vous souhaitez suivre
-          </Text>
+        <ScrollView style={styles.content}>
+          <View style={styles.section}>
+            <Text style={[styles.sectionTitle, { color: theme.colors.text }]}>Apparence</Text>
+            <Text style={[styles.sectionDescription, { color: theme.colors.textSecondary }]}>
+              Choisissez le thème de l'application
+            </Text>
 
-          {(Object.keys(serviceLabels) as ServiceType[]).map((service) => (
-            <View key={service} style={styles.settingRow}>
-              <Text style={styles.settingLabel}>{serviceLabels[service]}</Text>
+            <View style={{ flexDirection: 'row', gap: 10, marginBottom: 16 }}>
+              {(['auto', 'light', 'dark'] as const).map((mode) => {
+                const isActive = (settings.themeMode || 'auto') === mode;
+                const label = mode === 'auto' ? 'Auto' : mode === 'light' ? 'Clair' : 'Sombre';
+                const icon = mode === 'auto' ? 'brightness-auto' : mode === 'light' ? 'white-balance-sunny' : 'weather-night';
+
+                return (
+                  <Pressable
+                    key={mode}
+                    onPress={() => updateSettings({ themeMode: mode })}
+                    style={{
+                      flex: 1,
+                      backgroundColor: isActive ? Colors.pastel.mintActive : theme.colors.cardBg,
+                      borderColor: isActive ? Colors.pastel.mintActive : theme.isDark ? theme.colors.border : Colors.neutral.gray,
+                      borderWidth: 1,
+                      borderRadius: 8,
+                      padding: 12,
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                    }}
+                  >
+                    <Text style={{
+                      color: isActive ? '#FFF' : theme.colors.text,
+                      fontWeight: isActive ? 'bold' : 'normal'
+                    }}>
+                      {label}
+                    </Text>
+                  </Pressable>
+                );
+              })}
+            </View>
+          </View>
+
+          <View style={styles.section}>
+            <Text style={[styles.sectionTitle, { color: theme.colors.text }]}>Services actifs</Text>
+            <Text style={[styles.sectionDescription, { color: theme.colors.textSecondary }]}>
+              Activez ou désactivez les types d'événements que vous souhaitez suivre
+            </Text>
+
+            {(Object.keys(serviceLabels) as ServiceType[]).map((service) => (
+              <View key={service} style={[styles.settingRow, { backgroundColor: theme.colors.cardBg }]}>
+                <Text style={[styles.settingLabel, { color: theme.colors.text }]}>{serviceLabels[service]}</Text>
+                <Switch
+                  value={settings.enabledServices.includes(service)}
+                  onValueChange={() => toggleService(service)}
+                  trackColor={{
+                    false: theme.isDark ? theme.colors.border : Colors.neutral.gray,
+                    true: Colors.pastel.mintActive,
+                  }}
+                  thumbColor={Colors.neutral.white}
+                />
+              </View>
+            ))}
+          </View>
+
+          <View style={styles.section}>
+            <Text style={[styles.sectionTitle, { color: theme.colors.text }]}>Notifications</Text>
+            <Text style={[styles.sectionDescription, { color: theme.colors.textSecondary }]}>
+              Activer ou désactivez les rappels de biberon et de couche
+            </Text>
+            <View style={[styles.settingRow, { backgroundColor: theme.colors.cardBg }]}>
+              <Text style={[styles.settingLabel, { color: theme.colors.text }]}>🔔 Autoriser les notifications</Text>
               <Switch
-                value={settings.enabledServices.includes(service)}
-                onValueChange={() => toggleService(service)}
+                value={settings.notificationsEnabled !== false}
+                onValueChange={(value) => {
+                  updateSettings({ notificationsEnabled: value });
+                  if (!value) {
+                    babies.forEach(async (b) => {
+                      const { cancelFeedingNotification, cancelDiaperNotification } = await import('../../src/utils/notifications');
+                      await cancelFeedingNotification(b.id);
+                      await cancelDiaperNotification(b.id);
+                    });
+                    Alert.alert('Notifications désactivées', 'Tous les rappels programmés ont été annulés.');
+                  } else {
+                    Alert.alert('Notifications activées', 'Les prochains événements programmeront des rappels.');
+                  }
+                }}
                 trackColor={{
-                  false: Colors.neutral.gray,
+                  false: theme.isDark ? theme.colors.border : Colors.neutral.gray,
                   true: Colors.pastel.mintActive,
                 }}
                 thumbColor={Colors.neutral.white}
               />
             </View>
-          ))}
-        </View>
+          </View>
 
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Export de données</Text>
-          <View style={styles.exportCard}>
-            <Text style={styles.exportTitle}>📄 Exporter en PDF</Text>
-            <Text style={styles.exportDescription}>
-              Sélectionnez les bébés à inclure dans le rapport PDF
+          <View style={styles.section}>
+            <Text style={[styles.sectionTitle, { color: theme.colors.text }]}>Export de données</Text>
+            <View style={[styles.exportCard, { backgroundColor: theme.colors.cardBg, borderColor: theme.isDark ? theme.colors.border : Colors.pastel.mintActive }]}>
+              <Text style={[styles.exportTitle, { color: theme.colors.text }]}>📄 Exporter en PDF</Text>
+              <Text style={[styles.exportDescription, { color: theme.colors.textSecondary }]}>
+                Sélectionnez les bébés à inclure dans le rapport PDF
+              </Text>
+
+              {babies.length === 0 ? (
+                <Text style={[styles.noBabiesText, { color: theme.colors.textSecondary }]}>Aucun bébé enregistré</Text>
+              ) : (
+                <>
+                  <View style={styles.babySelectionActions}>
+                    <Pressable onPress={selectAllBabies} style={styles.selectionActionButton}>
+                      <Text style={styles.selectionActionText}>Tout sélectionner</Text>
+                    </Pressable>
+                    <Pressable onPress={deselectAllBabies} style={styles.selectionActionButton}>
+                      <Text style={styles.selectionActionText}>Tout désélectionner</Text>
+                    </Pressable>
+                  </View>
+
+                  <View style={styles.babySelectionList}>
+                    {babies.map((baby) => {
+                      const isSelected = selectedBabyIds.has(baby.id);
+                      return (
+                        <Pressable
+                          key={baby.id}
+                          style={[styles.babySelectionRow, { backgroundColor: theme.colors.cardBg, borderColor: theme.isDark ? theme.colors.border : Colors.neutral.gray }]}
+                          onPress={() => toggleBabySelection(baby.id)}
+                        >
+                          <View style={styles.babySelectionLeft}>
+                            <View style={[styles.babyColorIndicator, { backgroundColor: baby.color }]} />
+                            <Text style={[styles.babySelectionName, { color: theme.colors.text }]}>{baby.name}</Text>
+                          </View>
+                          <Switch
+                            value={isSelected}
+                            onValueChange={() => toggleBabySelection(baby.id)}
+                            trackColor={{
+                              false: theme.isDark ? theme.colors.border : Colors.neutral.gray,
+                              true: Colors.pastel.mintActive,
+                            }}
+                            thumbColor={Colors.neutral.white}
+                          />
+                        </Pressable>
+                      );
+                    })}
+                  </View>
+
+                  <Pressable
+                    style={[styles.exportButton, (isExporting || selectedBabyIds.size === 0) && styles.exportButtonDisabled]}
+                    onPress={handleExportPDF}
+                    disabled={isExporting || selectedBabyIds.size === 0}
+                  >
+                    {isExporting ? (
+                      <ActivityIndicator color={Colors.neutral.white} />
+                    ) : (
+                      <Text style={styles.exportButtonText}>
+                        Exporter ({selectedBabyIds.size} bébé{selectedBabyIds.size > 1 ? 's' : ''})
+                      </Text>
+                    )}
+                  </Pressable>
+                </>
+              )}
+            </View>
+          </View>
+
+          <View style={styles.section}>
+            <Text style={[styles.sectionTitle, { color: theme.colors.text }]}>À propos</Text>
+            <Text style={[styles.aboutText, { backgroundColor: theme.colors.cardBg, color: theme.colors.textSecondary }]}>
+              Babyrons v1.0.0 © 2025{'\n'}
+              Suivi des bébés pour parents de jumeaux et triplés{'\n'}
+              Développé par Andreas Arnolfo & Matthieu Gallice avec ❤️{'\n'}
             </Text>
-            
-            {babies.length === 0 ? (
-              <Text style={styles.noBabiesText}>Aucun bébé enregistré</Text>
-            ) : (
-              <>
-                <View style={styles.babySelectionActions}>
-                  <Pressable onPress={selectAllBabies} style={styles.selectionActionButton}>
-                    <Text style={styles.selectionActionText}>Tout sélectionner</Text>
-                  </Pressable>
-                  <Pressable onPress={deselectAllBabies} style={styles.selectionActionButton}>
-                    <Text style={styles.selectionActionText}>Tout désélectionner</Text>
-                  </Pressable>
-                </View>
-                
-                <View style={styles.babySelectionList}>
-                  {babies.map((baby) => {
-                    const isSelected = selectedBabyIds.has(baby.id);
-                    return (
-                      <Pressable
-                        key={baby.id}
-                        style={styles.babySelectionRow}
-                        onPress={() => toggleBabySelection(baby.id)}
-                      >
-                        <View style={styles.babySelectionLeft}>
-                          <View style={[styles.babyColorIndicator, { backgroundColor: baby.color }]} />
-                          <Text style={styles.babySelectionName}>{baby.name}</Text>
-                        </View>
-                        <Switch
-                          value={isSelected}
-                          onValueChange={() => toggleBabySelection(baby.id)}
-                          trackColor={{
-                            false: Colors.neutral.gray,
-                            true: Colors.pastel.mintActive,
-                          }}
-                          thumbColor={Colors.neutral.white}
-                        />
-                      </Pressable>
-                    );
-                  })}
-                </View>
-                
-                <Pressable 
-                  style={[styles.exportButton, (isExporting || selectedBabyIds.size === 0) && styles.exportButtonDisabled]} 
-                  onPress={handleExportPDF}
-                  disabled={isExporting || selectedBabyIds.size === 0}
-                >
-                  {isExporting ? (
-                    <ActivityIndicator color={Colors.neutral.white} />
-                  ) : (
-                    <Text style={styles.exportButtonText}>
-                      Exporter ({selectedBabyIds.size} bébé{selectedBabyIds.size > 1 ? 's' : ''})
-                    </Text>
-                  )}
+          </View>
+
+          <View style={styles.section}>
+            <Text style={[styles.sectionTitle, { color: theme.colors.text }]}>Compte</Text>
+            {session ? (
+              <View style={[styles.accountCard, { backgroundColor: theme.colors.cardBg }]}>
+                <Text style={[styles.accountEmail, { color: theme.colors.text }]}>{session.user.email}</Text>
+                <Pressable style={styles.logoutButton} onPress={signOut}>
+                  <Text style={styles.logoutButtonText}>Se déconnecter</Text>
                 </Pressable>
-              </>
+              </View>
+            ) : (
+              <Text style={[styles.aboutText, { backgroundColor: theme.colors.cardBg, color: theme.colors.textSecondary }]}>Non connecté</Text>
             )}
           </View>
-        </View>
-
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>À propos</Text>
-          <Text style={styles.aboutText}>
-            Babyrons v1.0.0 © 2025{'\n'}
-            Suivi des bébés pour parents de jumeaux et triplés{'\n'}
-            Développé par Andreas Arnolfo & Matthieu Gallice avec ❤️{'\n'}
-             
-          </Text>
-        </View>
-
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Compte</Text>
-          {session ? (
-            <View style={styles.accountCard}>
-              <Text style={styles.accountEmail}>{session.user.email}</Text>
-              <Pressable style={styles.logoutButton} onPress={signOut}>
-                <Text style={styles.logoutButtonText}>Se déconnecter</Text>
-              </Pressable>
-            </View>
-          ) : (
-            <Text style={styles.aboutText}>Non connecté</Text>
-          )}
-        </View>
-      </ScrollView>
-    </View>
+        </ScrollView>
+      </View>
     </PatternBackground>
   );
 }

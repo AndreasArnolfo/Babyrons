@@ -2,24 +2,23 @@
 import { Tabs } from 'expo-router';
 import React from 'react';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
-import Animated, { useAnimatedStyle, useSharedValue, withSpring, withTiming } from 'react-native-reanimated';
+import Animated, { useAnimatedStyle, useSharedValue, withSpring, withTiming, withSequence } from 'react-native-reanimated';
 import { useEffect } from 'react';
+import { useAppTheme } from '../../src/hooks/useAppTheme';
 
 // --- Palette Pastel "Babyrons" avec style enfantin ---
 const activeColor = '#FF6B9D'; // Rose pastel vif et enfantin
 const inactiveColor = '#C0C0C0'; // Gris doux pour l'inactif
-const backgroundColor = '#FFFFFF'; // Blanc pur
-const tabBarShadow = '#FF6B9D'; // Ombre colorée pour un effet plus enfantin
 
 // Composant d'icône animé
-const AnimatedIcon = ({ 
-  IconComponent, 
-  name, 
-  nameOutline, 
-  size, 
-  color, 
-  focused 
-}: { 
+const AnimatedIcon = ({
+  IconComponent,
+  name,
+  nameOutline,
+  size,
+  color,
+  focused
+}: {
   IconComponent: any;
   name: string;
   nameOutline: string;
@@ -30,6 +29,7 @@ const AnimatedIcon = ({
   const scale = useSharedValue(focused ? 1 : 0.85);
   const rotation = useSharedValue(0);
   const opacity = useSharedValue(focused ? 1 : 0.7);
+  const translateY = useSharedValue(0);
 
   useEffect(() => {
     if (focused) {
@@ -39,6 +39,11 @@ const AnimatedIcon = ({
         mass: 0.8,
       });
       opacity.value = withTiming(1, { duration: 200 });
+      translateY.value = withSequence(
+        withTiming(-8, { duration: 150 }), // Jump up
+        withSpring(0, { damping: 8, stiffness: 200 }) // Land softly
+      );
+
       // Animation de rotation subtile pour l'icône de réglages
       if (name === 'cog') {
         rotation.value = withSpring(360, {
@@ -54,13 +59,15 @@ const AnimatedIcon = ({
       rotation.value = withTiming(0, {
         duration: 200,
       });
+      translateY.value = withTiming(0);
     }
-  }, [focused, name, scale, opacity, rotation]);
+  }, [focused, name, scale, opacity, rotation, translateY]);
 
   const animatedStyle = useAnimatedStyle(() => {
     return {
       transform: [
         { scale: scale.value },
+        { translateY: translateY.value },
         { rotate: name === 'cog' ? `${rotation.value}deg` : '0deg' },
       ],
       opacity: opacity.value,
@@ -69,16 +76,18 @@ const AnimatedIcon = ({
 
   return (
     <Animated.View style={animatedStyle}>
-      <IconComponent 
-        name={focused ? name : nameOutline} 
-        size={size} 
-        color={color} 
+      <IconComponent
+        name={focused ? name : nameOutline}
+        size={size}
+        color={color}
       />
     </Animated.View>
   );
 };
 
 export default function TabLayout() {
+  const theme = useAppTheme();
+
   return (
     <Tabs
       screenOptions={{
@@ -86,20 +95,20 @@ export default function TabLayout() {
 
         // --- Styles pour le look enfantin ---
         tabBarActiveTintColor: activeColor,
-        tabBarInactiveTintColor: inactiveColor,
+        tabBarInactiveTintColor: theme.isDark ? '#718096' : inactiveColor,
 
         tabBarStyle: {
-          backgroundColor: backgroundColor,
+          backgroundColor: theme.isDark ? theme.colors.surface : '#FFFFFF',
           height: 75, // Plus haut pour un look plus enfantin
           paddingBottom: 20, // Marge pour la "home bar" (iPhone)
           paddingTop: 8,
           borderTopWidth: 2, // Bordure colorée et visible
-          borderTopColor: '#FFE5EC', // Rose très clair
-          
+          borderTopColor: theme.isDark ? theme.colors.border : '#FFE5EC', // Rose très clair
+
           // Ombre colorée pour un effet enfantin
-          shadowColor: tabBarShadow,
+          shadowColor: theme.isDark ? '#000' : '#FF6B9D',
           shadowOffset: { width: 0, height: -3 },
-          shadowOpacity: 0.15, // Plus visible
+          shadowOpacity: theme.isDark ? 0.3 : 0.15, // Plus visible
           shadowRadius: 8,
           elevation: 8, // Pour Android
         },
